@@ -2,6 +2,7 @@ import xlrd
 import json
 import re
 import os.path
+import json_minify
 
 from monkey_xls import KeyVo, ExportVo
 
@@ -40,8 +41,9 @@ def create_config_vo(p_file_path, p_suffix='ts'):
     export_vo.source_filename = os.path.basename(p_file_path)
 
     # 加载模板配置
-    with open('template\config.json', 'r') as f:
-        temp_map = json.loads(f.read())
+    with open('template\config.json', 'r', encoding='utf-8') as f:
+        # json_minify库支持json文件里面添加注释
+        temp_map = json.loads(json_minify.json_minify(f.read()))
         print('====加载模板文件配置成功')
 
     # 加载导出模板文件
@@ -146,4 +148,4 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
 
 # read_excel()
-create_config_vo(file)
+create_config_vo(file, 'as')

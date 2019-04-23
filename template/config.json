@@ -1,18 +1,26 @@
 {
+  /**
+   * 这里可以配置模板相关的配置
+   */
+
   "ts": {
+    //导出类文件的后缀名
     "suffix": "ts",
+    //模板文件名称
     "template": "ts.tmp",
+    //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
     "typeMap": {
       "Integer": "number",
       "String": "string"
     }
   },
+
   "as": {
-    "suffix": "ts",
-    "template": "ts.tmp",
+    "suffix": "as",
+    "template": "as.tmp",
     "typeMap": {
-      "Integer": "number",
-      "String": "string"
+      "Integer": "int",
+      "String": "String"
     }
   }
 }
