@@ -1,10 +1,9 @@
 import xlrd
 import json
 import re
+import os.path
 
-from datetime import date, datetime
-
-from KeyVo import KeyVo
+from monkey_xls import KeyVo, ExportVo
 
 file = 'G-goto跳转表.xlsx'
 
@@ -35,7 +34,11 @@ def read_excel():
     # 表格数据 ctype： 0 empty,1 string, 2 number, 3 date, 4 boolean, 5 error
 
 
-def create_config_vo(p_filename, p_suffix='ts'):
+def create_config_vo(p_file_path, p_suffix='ts'):
+    export_vo = ExportVo()
+    export_vo.source_path = p_file_path
+    export_vo.source_filename = os.path.basename(p_file_path)
+
     # 加载模板配置
     with open('template\config.json', 'r') as f:
         temp_map = json.loads(f.read())
@@ -43,46 +46,39 @@ def create_config_vo(p_filename, p_suffix='ts'):
 
     # 加载导出模板文件
     if p_suffix not in temp_map:
-        print('不存在配置：'+p_suffix)
+        print('不存在配置：' + p_suffix)
         return
 
     temp_cfg = temp_map[p_suffix]
     temp_url = temp_cfg['template']
     with open('template\\' + temp_url, 'r', encoding='utf-8') as f:
-        tmp_str = f.read()
-        print(tmp_str)
+        str_tmp = f.read()
 
-    # 正则表达式官方文档参考
-    # https://docs.python.org/zh-cn/3.7/library/re.html
-    # re.M 让$生效
-    # re.DOTALL 让.可以匹配换行符
-    str_no = re.sub('^<<<<\s*$(.+)^>>>>\s*$', '', tmp_str, flags=re.M|re.DOTALL)
-    print(str_no)
-
-    wb = xlrd.open_workbook(filename=p_filename)
+    wb = xlrd.open_workbook(filename=p_file_path)
     sheet = wb.sheet_by_index(0)
-    export_name = sheet.cell(0, 0).value
+    export_vo.export_name = sheet.cell(0, 0).value
 
     # 导出的文件名
-    export_filename = export_name + 'Config' + '.' + p_suffix
-    source_filename = p_filename
+    export_vo.export_filename = export_vo.export_name + 'Config' + '.' + p_suffix
+    export_vo.export_class_name = export_vo.export_name + 'Config'
 
-    t_row_count = sheet.nrows
-    t_col_count = sheet.ncols
-    t_vo_list = []
-    t_comment_index_r = 0
-    t_client_key_index_r = 1
-    t_type_index_r = 2
-    t_server_key_index_r = 3
-    t_comment_rows = sheet.row(t_comment_index_r)
-    t_client_key_rows = sheet.row(t_client_key_index_r)
-    t_type_rows = sheet.row(t_type_index_r)
-    t_server_key_rows = sheet.row(t_server_key_index_r)
+    row_count = sheet.nrows
+    col_count = sheet.ncols
+    vo_list = []
+    comment_index_r = 0
+    client_key_index_r = 1
+    type_index_r = 2
+    server_key_index_r = 3
+    comment_rows = sheet.row(comment_index_r)
+    client_key_rows = sheet.row(client_key_index_r)
+    type_rows = sheet.row(type_index_r)
+    server_key_rows = sheet.row(server_key_index_r)
 
-    for i in range(1, t_col_count):
-        cell_client = t_client_key_rows[i]
-        cell_server = t_server_key_rows[i]
-        cell_type = t_type_rows[i]
+    for i in range(1, col_count):
+        cell_client = client_key_rows[i]
+        cell_server = server_key_rows[i]
+        cell_type = type_rows[i]
+        cell_comment = comment_rows[i]
         '''
         表格数据 ctype： 
         0 empty
@@ -96,14 +92,57 @@ def create_config_vo(p_filename, p_suffix='ts'):
             continue
         t_type = TYPE_INT if cell_type.value == TYPE_INT else TYPE_STRING
         t_vo = KeyVo(p_index=i, p_type=t_type)
-        t_vo_list.append(t_vo)
+        vo_list.append(t_vo)
         if cell_client.ctype == 1:
             t_vo.key_client = cell_client.value
             t_vo.export_client = True
         if cell_server.ctype == 1:
             t_vo.key_server = cell_server.value
             t_vo.export_server = True
+        t_vo.comment = cell_comment.value
         print(i, t_vo.index, t_vo.type, t_vo.key_client, t_vo.key_server)
+
+    # 根据配置转换类型
+    def transform_tye(p_type):
+        if p_type in temp_cfg['typeMap']:
+            return temp_cfg['typeMap'][p_type]
+        else:
+            return None
+
+    # 正则表达式官方文档参考
+    # https://docs.python.org/zh-cn/3.7/library/re.html
+    # re.M 让$生效
+    # re.DOTALL 让.可以匹配换行符
+
+    def rpl_loop(m):
+        result = ''
+        loop_str = m.group(1)
+        for v in vo_list:
+            def rpl_property(m):
+                key_str = m.group(1)
+                if key_str == 'property_name':
+                    return v.key_client
+                elif key_str == 'type':
+                    return transform_tye(v.type)
+                elif key_str == 'comment':
+                    return v.comment
+
+            result += re.sub('<#(.*?)#>', rpl_property, loop_str)
+        return result
+
+    output_str = re.sub('^<<<<\s*$(.+)^>>>>\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+
+    def rpl_export(m):
+        key_str = m.group(1)
+        if key_str == 'source_filename':
+            return export_vo.source_filename
+        elif key_str == 'export_name':
+            return export_vo.export_name
+        elif key_str == 'export_class_name':
+            return export_vo.export_class_name
+
+    output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
+    print(output_str)
 
 
 # read_excel()
