@@ -10,11 +10,20 @@ package com.data.configData.excel
 		public function <#export_class_name#>()
 		{
 		}
+		
+		private function initData(pData:Object):void
+		{
+<<<<
+			<#property_name#> = pData['<#property_name#>'];
+>>>>
+		}
+
 <<<<
 		/**
 		 * <#comment#>
 		 */
 		public var <#property_name#>:<#type#>;
+
 >>>>
 	}
 }

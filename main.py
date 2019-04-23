@@ -53,6 +53,13 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
     temp_cfg = temp_map[p_suffix]
     temp_url = temp_cfg['template']
+    '''
+    在Python3，可以通过open函数的newline参数来控制Universal new line mode
+    读取时候，不指定newline，则默认开启Universal new line mode，所有\n, \r, or \r\n被默认转换为\n；
+    写入时，不指定newline，则换行符为各系统默认的换行符（\n, \r, or \r\n, ），指定为newline='\n'，则都替换为\n（相当于Universal new line mode）；
+    不论读或者写时，newline=''都表示不转换。
+    参考链接：https://www.zhihu.com/question/19751023
+    '''
     with open('template\\' + temp_url, 'r', encoding='utf-8') as f:
         str_tmp = f.read()
 
@@ -118,7 +125,7 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
     def rpl_loop(m):
         result = ''
-        loop_str = m.group(1)
+        loop_str = str(m.group(1)).lstrip('\n')
         for v in vo_list:
             def rpl_property(m):
                 key_str = m.group(1)
@@ -128,11 +135,14 @@ def create_config_vo(p_file_path, p_suffix='ts'):
                     return transform_tye(v.type)
                 elif key_str == 'comment':
                     return v.comment
+                elif key_str == 'index':
+                    return v.index
 
             result += re.sub('<#(.*?)#>', rpl_property, loop_str)
-        return result
+        # 这里需要把前后的换行干掉
+        return result.rstrip('\n')
 
-    output_str = re.sub('^<<<<\s*$(.+)^>>>>\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+    output_str = re.sub('^<<<<\s*$(.+?)^>>>>\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
 
     def rpl_export(m):
         key_str = m.group(1)
@@ -144,7 +154,10 @@ def create_config_vo(p_file_path, p_suffix='ts'):
             return export_vo.export_class_name
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
-    print(output_str)
+
+    with open(export_vo.export_filename, 'w', encoding='utf-8') as f:
+        f.write(output_str)
+        print('成功导出')
 
 
 # read_excel()

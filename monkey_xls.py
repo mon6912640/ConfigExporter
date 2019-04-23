@@ -23,3 +23,5 @@ class ExportVo:
     export_filename = ''
     # 导出的类名
     export_class_name = ''
+    # 配置
+    cfg = ''
