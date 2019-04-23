@@ -1,0 +1,12 @@
+/**
+ * <#source_filename#>
+ * 表名<#export_name#>
+ */
+type <#export_name#> = {
+<<<<
+	/**
+	 * <#comment#>
+	 */
+	<#property_name#>:<#type#>;
+>>>>
+}

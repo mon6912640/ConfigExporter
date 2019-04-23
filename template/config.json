@@ -1,0 +1,19 @@
+{
+  "ts": {
+    "suffix": "ts",
+    "template": "ts.tmp",
+    "typeMap": {
+      "Integer": "number",
+      "String": "string"
+    }
+  },
+  "as": {
+    "suffix": "ts",
+    "template": "ts.tmp",
+    "typeMap": {
+      "Integer": "number",
+      "String": "string"
+    }
+  }
+}
+
