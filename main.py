@@ -4,7 +4,7 @@ import re
 import os.path
 import json_minify
 
-from monkey_xls import KeyVo, ExportVo
+from monkey_xls import KeyVo, ExportVo, TempCfgVo
 
 file = 'G-goto跳转表.xlsx'
 
@@ -41,7 +41,7 @@ def create_config_vo(p_file_path, p_suffix='ts'):
     export_vo.source_filename = os.path.basename(p_file_path)
 
     # 加载模板配置
-    with open('template\config.json', 'r', encoding='utf-8') as f:
+    with open('template\\config.json', 'r', encoding='utf-8') as f:
         # json_minify库支持json文件里面添加注释
         temp_map = json.loads(json_minify.json_minify(f.read()))
         print('====加载模板文件配置成功')
@@ -51,8 +51,9 @@ def create_config_vo(p_file_path, p_suffix='ts'):
         print('不存在配置：' + p_suffix)
         return
 
-    temp_cfg = temp_map[p_suffix]
-    temp_url = temp_cfg['template']
+    export_vo.cfg = TempCfgVo(temp_map[p_suffix])
+    temp_cfg = export_vo.cfg.type_map
+    temp_url = export_vo.cfg.template
     '''
     在Python3，可以通过open函数的newline参数来控制Universal new line mode
     读取时候，不指定newline，则默认开启Universal new line mode，所有\n, \r, or \r\n被默认转换为\n；
@@ -122,7 +123,6 @@ def create_config_vo(p_file_path, p_suffix='ts'):
     # https://docs.python.org/zh-cn/3.7/library/re.html
     # re.M 让$生效
     # re.DOTALL 让.可以匹配换行符
-
     def rpl_loop(m):
         result = ''
         loop_str = str(m.group(1)).lstrip('\n')

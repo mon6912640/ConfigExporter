@@ -24,4 +24,15 @@ class ExportVo:
     # 导出的类名
     export_class_name = ''
     # 配置
-    cfg = ''
+    cfg = None
+
+
+class TempCfgVo:
+    suffix = ''
+    template = ''
+    type_map = None
+
+    def __init__(self, p_cfg_data):
+        self.suffix = p_cfg_data['suffix']
+        self.template = p_cfg_data['template']
+        self.type_map = p_cfg_data['typeMap']
