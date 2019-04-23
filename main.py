@@ -114,8 +114,8 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
     # 根据配置转换类型
     def transform_tye(p_type):
-        if p_type in temp_cfg['typeMap']:
-            return temp_cfg['typeMap'][p_type]
+        if p_type in temp_cfg:
+            return temp_cfg[p_type]
         else:
             return None
 

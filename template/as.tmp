@@ -11,7 +11,7 @@ package com.data.configData.excel
 		{
 		}
 		
-		private function initData(pData:Object):void
+		public function initData(pData:Object):void
 		{
 <<<<
 			<#property_name#> = pData['<#property_name#>'];
