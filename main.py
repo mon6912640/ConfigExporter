@@ -8,6 +8,10 @@ from monkey_xls import KeyVo, ExportVo, TempCfgVo
 
 file = 'G-goto跳转表.xlsx'
 
+# 模板配置文件 config.json
+template_config = None
+cfg_vo_map = {}
+
 # 类型常量
 TYPE_INT = 'Integer'
 TYPE_STRING = 'String'
@@ -35,24 +39,40 @@ def read_excel():
     # 表格数据 ctype： 0 empty,1 string, 2 number, 3 date, 4 boolean, 5 error
 
 
-def create_config_vo(p_file_path, p_suffix='ts'):
+# 通过key获取模板配置数据
+def get_cfg_by_key(p_key):
+    global cfg_vo_map
+
+    if p_key not in cfg_vo_map:
+        global template_config
+
+        if not template_config:
+            # 加载模板配置
+            with open('template\\config.json', 'r', encoding='utf-8') as f:
+                # json_minify库支持json文件里面添加注释
+                template_config = json.loads(json_minify.json_minify(f.read()))
+                print('====加载模板文件配置成功')
+
+        if p_key not in template_config:
+            print('config.json 中不存在 ' + p_key + ' 配置：')
+            exit();
+
+        cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
+
+    return cfg_vo_map[p_key]
+
+
+def run(p_key):
+    cfg = get_cfg_by_key(p_key)
+
+
+def create_config_vo(p_file_path, p_key='ts'):
     export_vo = ExportVo()
     export_vo.source_path = p_file_path
     export_vo.source_filename = os.path.basename(p_file_path)
 
-    # 加载模板配置
-    with open('template\\config.json', 'r', encoding='utf-8') as f:
-        # json_minify库支持json文件里面添加注释
-        temp_map = json.loads(json_minify.json_minify(f.read()))
-        print('====加载模板文件配置成功')
-
-    # 加载导出模板文件
-    if p_suffix not in temp_map:
-        print('不存在配置：' + p_suffix)
-        return
-
-    export_vo.cfg = TempCfgVo(temp_map[p_suffix])
-    temp_cfg = export_vo.cfg.type_map
+    export_vo.cfg = get_cfg_by_key(p_key)
+    type_map = export_vo.cfg.type_map
     temp_url = export_vo.cfg.template
     '''
     在Python3，可以通过open函数的newline参数来控制Universal new line mode
@@ -69,7 +89,7 @@ def create_config_vo(p_file_path, p_suffix='ts'):
     export_vo.export_name = sheet.cell(0, 0).value
 
     # 导出的文件名
-    export_vo.export_filename = export_vo.export_name + 'Config' + '.' + p_suffix
+    export_vo.export_filename = export_vo.export_name + 'Config' + '.' + export_vo.cfg.suffix
     export_vo.export_class_name = export_vo.export_name + 'Config'
 
     row_count = sheet.nrows
@@ -114,8 +134,8 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
     # 根据配置转换类型
     def transform_tye(p_type):
-        if p_type in temp_cfg:
-            return temp_cfg[p_type]
+        if p_type in type_map:
+            return type_map[p_type]
         else:
             return None
 
@@ -161,4 +181,4 @@ def create_config_vo(p_file_path, p_suffix='ts'):
 
 
 # read_excel()
-create_config_vo(file, 'as')
+create_config_vo(file, 'ts3')

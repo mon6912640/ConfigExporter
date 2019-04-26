@@ -13,6 +13,10 @@ class KeyVo:
 
 
 class ExportVo:
+    # 源文件夹路径
+    source_dir = ''
+    # 输出文件夹路径
+    output_dir = ''
     # xls源文件名
     source_filename = ''
     # xls文件的源路径
@@ -31,8 +35,12 @@ class TempCfgVo:
     suffix = ''
     template = ''
     type_map = None
+    source_path = ''
+    output_path = ''
 
     def __init__(self, p_cfg_data):
         self.suffix = p_cfg_data['suffix']
         self.template = p_cfg_data['template']
         self.type_map = p_cfg_data['typeMap']
+        self.source_path = p_cfg_data['sourcePath']
+        self.output_path = p_cfg_data['outputPath']

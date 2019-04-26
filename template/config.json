@@ -1,14 +1,27 @@
 {
   /**
-   * 这里可以配置模板相关的配置
+   * 这里可以配置模板相关的配置，该json文件支持注释（需要Python3的第三方json_minify库）
    */
 
   "ts": {
+    //源路径
+    "sourcePath": "./source",
+    //输出路径
+    "outputPath": "./output",
     //导出类文件的后缀名
     "suffix": "ts",
     //模板文件名称
     "template": "ts.tmp",
     //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
+    "typeMap": {
+      "Integer": "number",
+      "String": "string"
+    }
+  },
+
+  "ts2": {
+    "suffix": "ts",
+    "template": "ts2.tmp",
     "typeMap": {
       "Integer": "number",
       "String": "string"
