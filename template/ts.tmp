@@ -9,7 +9,7 @@ type <#export_class_name#> = {
 	/**
 	 * <#comment#>
 	 */
-	<#property_name#>:<#type#>;
+	<#property_name#> : <#type#>;
 
 >>>>
 }

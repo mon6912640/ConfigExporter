@@ -5,7 +5,7 @@
 
   "ts": {
     //源路径
-    "sourcePath": "./source",
+    "sourcePath": "D:\\work\\plan\\配置表",
     //输出路径
     "outputPath": "./output",
     //导出类文件的后缀名
@@ -20,6 +20,8 @@
   },
 
   "ts2": {
+    "sourcePath": "D:\\work\\plan\\配置表",
+    "outputPath": "./output",
     "suffix": "ts",
     "template": "ts2.tmp",
     "typeMap": {
@@ -29,8 +31,21 @@
   },
 
   "as": {
+    "sourcePath": "D:\\work\\plan\\配置表",
+    "outputPath": "./output",
     "suffix": "as",
     "template": "as.tmp",
+    "typeMap": {
+      "Integer": "int",
+      "String": "String"
+    }
+  },
+
+  "lua": {
+    "sourcePath": "./source",
+    "outputPath": "./output",
+    "suffix": "lua",
+    "template": "lua.tmp",
     "typeMap": {
       "Integer": "int",
       "String": "String"

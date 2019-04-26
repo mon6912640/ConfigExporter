@@ -12,6 +12,21 @@ class KeyVo:
         self.type = p_type
 
 
+class TempCfgVo:
+    suffix = ''
+    template = ''
+    type_map = None
+    source_path = ''
+    output_path = ''
+
+    def __init__(self, p_cfg_data):
+        self.suffix = p_cfg_data['suffix']
+        self.template = p_cfg_data['template']
+        self.type_map = p_cfg_data['typeMap']
+        self.source_path = p_cfg_data['sourcePath']
+        self.output_path = p_cfg_data['outputPath']
+
+
 class ExportVo:
     # 源文件夹路径
     source_dir = ''
@@ -28,19 +43,4 @@ class ExportVo:
     # 导出的类名
     export_class_name = ''
     # 配置
-    cfg = None
-
-
-class TempCfgVo:
-    suffix = ''
-    template = ''
-    type_map = None
-    source_path = ''
-    output_path = ''
-
-    def __init__(self, p_cfg_data):
-        self.suffix = p_cfg_data['suffix']
-        self.template = p_cfg_data['template']
-        self.type_map = p_cfg_data['typeMap']
-        self.source_path = p_cfg_data['sourcePath']
-        self.output_path = p_cfg_data['outputPath']
+    cfg: TempCfgVo = None

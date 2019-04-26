@@ -1,3 +1,5 @@
+import time
+
 import xlrd
 import json
 import re
@@ -40,7 +42,7 @@ def read_excel():
 
 
 # 通过key获取模板配置数据
-def get_cfg_by_key(p_key):
+def get_cfg_by_key(p_key) -> TempCfgVo:
     global cfg_vo_map
 
     if p_key not in cfg_vo_map:
@@ -62,16 +64,12 @@ def get_cfg_by_key(p_key):
     return cfg_vo_map[p_key]
 
 
-def run(p_key):
-    cfg = get_cfg_by_key(p_key)
-
-
-def create_config_vo(p_file_path, p_key='ts'):
+def create_config_vo(p_file_path, p_cfg):
     export_vo = ExportVo()
     export_vo.source_path = p_file_path
     export_vo.source_filename = os.path.basename(p_file_path)
 
-    export_vo.cfg = get_cfg_by_key(p_key)
+    export_vo.cfg = p_cfg
     type_map = export_vo.cfg.type_map
     temp_url = export_vo.cfg.template
     '''
@@ -130,7 +128,11 @@ def create_config_vo(p_file_path, p_key='ts'):
             t_vo.key_server = cell_server.value
             t_vo.export_server = True
         t_vo.comment = cell_comment.value
-        print(i, t_vo.index, t_vo.type, t_vo.key_client, t_vo.key_server)
+        # print(i, t_vo.index, t_vo.type, t_vo.key_client, t_vo.key_server)
+
+    # 跳过无key列表的数据列表
+    if len(vo_list) == 0:
+        return
 
     # 根据配置转换类型
     def transform_tye(p_type):
@@ -147,6 +149,9 @@ def create_config_vo(p_file_path, p_key='ts'):
         result = ''
         loop_str = str(m.group(1)).lstrip('\n')
         for v in vo_list:
+            if not v.key_client:
+                continue
+
             def rpl_property(m):
                 key_str = m.group(1)
                 if key_str == 'property_name':
@@ -175,10 +180,29 @@ def create_config_vo(p_file_path, p_key='ts'):
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
 
-    with open(export_vo.export_filename, 'w', encoding='utf-8') as f:
+    with open(os.path.join(export_vo.cfg.output_path, export_vo.export_filename), 'w', encoding='utf-8') as f:
         f.write(output_str)
-        print('成功导出')
+        # print('成功导出', export_vo.export_filename)
+
+
+def run(p_key):
+    cfg = get_cfg_by_key(p_key)
+    # 遍历文件夹内所有的xlsx文件
+    for fpath, dirnames, fnames in os.walk(cfg.source_path):
+        # print('fpath', fpath)
+        # print('dirname', dirnames)
+        # print('fnames', fnames)
+        # print('--------------')
+        for fname in fnames:
+            file_url = os.path.join(fpath, fname)
+            name, ext = os.path.splitext(file_url)
+            if ext == '.xlsx':
+                create_config_vo(file_url, cfg)
 
 
 # read_excel()
-create_config_vo(file, 'ts3')
+# create_config_vo(file, 'ts3')
+start = time.time()
+run('lua')
+end = time.time()
+print('总用时', end - start)
