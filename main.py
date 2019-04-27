@@ -134,13 +134,6 @@ def create_config_vo(p_file_path, p_cfg):
     if len(vo_list) == 0:
         return
 
-    # 根据配置转换类型
-    def transform_tye(p_type):
-        if p_type in type_map:
-            return type_map[p_type]
-        else:
-            return None
-
     # 正则表达式官方文档参考
     # https://docs.python.org/zh-cn/3.7/library/re.html
     # re.M 让$生效
@@ -154,15 +147,7 @@ def create_config_vo(p_file_path, p_cfg):
 
             def rpl_property(m):
                 key_str = m.group(1)
-                if key_str == 'property_name':
-                    return v.key_client
-                elif key_str == 'type':
-                    return transform_tye(v.type)
-                elif key_str == 'comment':
-                    return v.comment
-                elif key_str == 'index':
-                    # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
-                    return str(v.index)
+                return replace_key(key_str, p_export_vo=export_vo, p_key_vo=v)
 
             result += re.sub('<#(.*?)#>', rpl_property, loop_str)
         # 这里需要把前后的换行干掉
@@ -172,12 +157,7 @@ def create_config_vo(p_file_path, p_cfg):
 
     def rpl_export(m):
         key_str = m.group(1)
-        if key_str == 'source_filename':
-            return export_vo.source_filename
-        elif key_str == 'export_name':
-            return export_vo.export_name
-        elif key_str == 'export_class_name':
-            return export_vo.export_class_name
+        return replace_key(key_str, p_export_vo=export_vo)
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
 
@@ -186,7 +166,38 @@ def create_config_vo(p_file_path, p_cfg):
         # print('成功导出', export_vo.export_filename)
 
 
-def run(p_key):
+# 替换关键字
+def replace_key(p_key: str, p_export_vo: ExportVo, p_key_vo: KeyVo = None):
+    if p_key == 'source_filename':
+        return p_export_vo.source_filename
+    elif p_key == 'export_name':
+        return p_export_vo.export_name
+    elif p_key == 'export_class_name':
+        return p_export_vo.export_class_name
+    elif p_key_vo is not None:
+        if p_key == 'property_name':
+            return p_key_vo.key_client
+        elif p_key == 'type':
+            return transform_tye(p_key_vo.type, p_export_vo.cfg.type_map)
+        elif p_key == 'comment':
+            # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
+            return p_key_vo.comment
+        elif p_key == 'index':
+            return str(p_key_vo.index)
+    else:
+        return 'undefinded'
+
+
+# 根据配置转换类型
+def transform_tye(p_type, p_map):
+    if p_type in p_map:
+        return p_map[p_type]
+    else:
+        return None
+
+
+# 导出vo文件
+def export_vo_file(p_key):
     cfg = get_cfg_by_key(p_key)
     # 遍历文件夹内所有的xlsx文件
     for fpath, dirnames, fnames in os.walk(cfg.source_path):
@@ -201,9 +212,15 @@ def run(p_key):
                 create_config_vo(file_url, cfg)
 
 
+# 导出配置数据文件
+def export_vo_data():
+    print('fuck')
+    return
+
+
 # read_excel()
 # create_config_vo(file, 'ts3')
 start = time.time()
-run('lua')
+export_vo_file('ts')
 end = time.time()
 print('总用时', end - start)

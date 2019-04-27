@@ -5,7 +5,7 @@
 
   "ts": {
     //源路径
-    "sourcePath": "D:\\work\\plan\\配置表",
+    "sourcePath": "./source",
     //输出路径
     "outputPath": "./output",
     //导出类文件的后缀名
@@ -20,7 +20,7 @@
   },
 
   "ts2": {
-    "sourcePath": "D:\\work\\plan\\配置表",
+    "sourcePath": "./source",
     "outputPath": "./output",
     "suffix": "ts",
     "template": "ts2.tmp",
@@ -31,7 +31,7 @@
   },
 
   "as": {
-    "sourcePath": "D:\\work\\plan\\配置表",
+    "sourcePath": "./source",
     "outputPath": "./output",
     "suffix": "as",
     "template": "as.tmp",
