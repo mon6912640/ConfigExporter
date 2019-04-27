@@ -65,7 +65,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
     return cfg_vo_map[p_key]
 
 
-def create_config_vo(excel_vo: ExcelVo):
+def export_config_vo(excel_vo: ExcelVo):
     vo_list = excel_vo.key_vo_list
     # 跳过无key列表的数据列表
     if len(vo_list) == 0:
@@ -98,7 +98,11 @@ def create_config_vo(excel_vo: ExcelVo):
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
 
-    with open(os.path.join(excel_vo.cfg.output_path, excel_vo.export_filename), 'w', encoding='utf-8') as f:
+    path = os.path.join(excel_vo.cfg.output_path, excel_vo.export_filename)
+    root = os.path.dirname(path)
+    if not os.path.exists(root):
+        os.makedirs(root)  # 递归创建文件夹
+    with open(path, 'w', encoding='utf-8') as f:
         f.write(output_str)
         # print('成功导出', excel_vo.export_filename)
 
@@ -134,7 +138,7 @@ def transform_tye(p_type, p_map):
 
 
 # 导出vo文件
-def export_vo_file(p_key, op):
+def main_run(p_key, op):
     cfg = get_cfg_by_key(p_key)
     # 遍历文件夹内所有的xlsx文件
     global file_count
@@ -146,6 +150,8 @@ def export_vo_file(p_key, op):
         for fname in fnames:
             file_url = os.path.join(fpath, fname)
             name, ext = os.path.splitext(file_url)
+            if fname.find('~$G-') > -1:
+                continue
             if ext == '.xlsx':
                 wb = xlrd.open_workbook(filename=file_url)
                 sheet = wb.sheet_by_index(0)
@@ -155,7 +161,7 @@ def export_vo_file(p_key, op):
                 excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
                 file_count += 1
                 if (op & OP_VO) == OP_VO:  # 导出vo类
-                    create_config_vo(excel_vo)
+                    export_config_vo(excel_vo)
                 if (op & OP_DATA) == OP_DATA:  # 导出json数据
                     export_vo_data(excel_vo)
 
@@ -168,10 +174,15 @@ def export_vo_data(excel_vo: ExcelVo):
     for i in range(ExcelIndexEnum.data_start_r.value, sheet.nrows):
         rows = sheet.row(i)
         obj = {}
+        ok_flag = True
         for v in key_vo_list:
             cell = rows[v.index]
-            if v.type == KeyTypeEnum.TYPE_INT: #整型
-                if cell.ctype == 2: # number
+            # 跳过id为空的行
+            if v.index == ExcelIndexEnum.data_start_c.value and cell.ctype == 0:
+                ok_flag = False
+                break
+            if v.type == KeyTypeEnum.TYPE_INT.value:  # 整型
+                if cell.ctype == 2:  # number
                     if cell.value % 1 == 0.0:
                         value = int(cell.value)
                     else:
@@ -181,13 +192,20 @@ def export_vo_data(excel_vo: ExcelVo):
             else:
                 value = str(cell.value)
             obj[v.key_client] = value
-        obj_list.append(obj)
-        print(obj)
-
+        if ok_flag:
+            obj_list.append(obj)
+        # print(obj)
+    json_obj = json.dumps(obj_list, indent=4, ensure_ascii=False)
+    path = os.path.join('data', excel_vo.export_name + '.json')
+    root = os.path.dirname(path)
+    if not os.path.exists(root):
+        os.makedirs(root)  # 递归创建文件夹
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(json_obj)
 
 
 start = time.time()
-export_vo_file('ts', OP_DATA)
+main_run('ts2', OP_DATA | OP_VO)
 end = time.time()
 print('输出 %s 个文件' % (file_count))
 print('总用时', end - start)

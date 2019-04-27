@@ -161,7 +161,7 @@ class ExcelVo:
                 '''
                 if cell_client.ctype != 1 and cell_server.ctype != 1:  # 跳过非字符串的格子
                     continue
-                t_type = KeyTypeEnum.TYPE_INT if cell_type.value == KeyTypeEnum.TYPE_INT else KeyTypeEnum.TYPE_STRING
+                t_type = KeyTypeEnum.TYPE_INT.value if cell_type.value == KeyTypeEnum.TYPE_INT.value else KeyTypeEnum.TYPE_STRING.value
                 t_vo = KeyVo(p_index=i, p_type=t_type)
                 self.__key_vo_list.append(t_vo)
                 if cell_client.ctype == 1:
