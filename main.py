@@ -6,17 +6,22 @@ import re
 import os.path
 import json_minify
 
-from monkey_xls import KeyVo, ExportVo, TempCfgVo
+from monkey_xls import KeyVo, ExcelVo, TempCfgVo
 
 file = 'G-goto跳转表.xlsx'
 
 # 模板配置文件 template.json
 template_config = None
 cfg_vo_map = {}
+file_count = 0
 
 # 类型常量
 TYPE_INT = 'Integer'
 TYPE_STRING = 'String'
+
+# 操作枚举
+OP_VO = 0b1
+OP_DATA = 0b10
 
 
 def read_excel():
@@ -64,36 +69,8 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
     return cfg_vo_map[p_key]
 
 
-def create_config_vo(p_file_path, p_cfg):
-    export_vo = ExportVo()
-    export_vo.source_path = p_file_path
-    export_vo.source_filename = os.path.basename(p_file_path)
-
-    export_vo.cfg = p_cfg
-    type_map = export_vo.cfg.type_map
-    temp_url = export_vo.cfg.template
-    '''
-    在Python3，可以通过open函数的newline参数来控制Universal new line mode
-    读取时候，不指定newline，则默认开启Universal new line mode，所有\n, \r, or \r\n被默认转换为\n；
-    写入时，不指定newline，则换行符为各系统默认的换行符（\n, \r, or \r\n, ），指定为newline='\n'，则都替换为\n（相当于Universal new line mode）；
-    不论读或者写时，newline=''都表示不转换。
-    参考链接：https://www.zhihu.com/question/19751023
-    '''
-    with open('template\\' + temp_url, 'r', encoding='utf-8') as f:
-        str_tmp = f.read()
-
-    wb = xlrd.open_workbook(filename=p_file_path)
-    sheet = wb.sheet_by_index(0)
-    export_name = sheet.cell(0, 0).value
-    if sheet.cell_type(0, 0) != 1:
-        print('第一行第一格没有填写表名，无效的xlsx：' + export_vo.source_filename)
-        return
-
-    export_vo.export_name = export_name
-
-    # 导出的文件名
-    export_vo.export_filename = export_vo.export_name + 'Config' + '.' + export_vo.cfg.suffix
-    export_vo.export_class_name = export_vo.export_name + 'Config'
+def create_config_vo(excel_vo: ExcelVo):
+    sheet = excel_vo.sheet
 
     row_count = sheet.nrows
     col_count = sheet.ncols
@@ -152,38 +129,38 @@ def create_config_vo(p_file_path, p_cfg):
 
             def rpl_property(m1):
                 key_str = m1.group(1)
-                return replace_key(key_str, p_export_vo=export_vo, p_key_vo=v)
+                return replace_key(key_str, p_excel_vo=excel_vo, p_key_vo=v)
 
             result += re.sub('<#(.*?)#>', rpl_property, loop_str)
         # 这里需要把前后的换行干掉
         return result.rstrip('\n')
 
-    output_str = re.sub('^<<<<\\s*$(.+?)^>>>>\\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+    output_str = re.sub('^<<<<\\s*$(.+?)^>>>>\\s*$', rpl_loop, excel_vo.cfg.str_tmp, flags=re.M | re.DOTALL)
 
     def rpl_export(m):
         key_str = m.group(1)
-        return replace_key(key_str, p_export_vo=export_vo)
+        return replace_key(key_str, p_excel_vo=excel_vo)
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
 
-    with open(os.path.join(export_vo.cfg.output_path, export_vo.export_filename), 'w', encoding='utf-8') as f:
+    with open(os.path.join(excel_vo.cfg.output_path, excel_vo.export_filename), 'w', encoding='utf-8') as f:
         f.write(output_str)
-        # print('成功导出', export_vo.export_filename)
+        # print('成功导出', excel_vo.export_filename)
 
 
 # 替换关键字
-def replace_key(p_key: str, p_export_vo: ExportVo, p_key_vo: KeyVo = None):
+def replace_key(p_key: str, p_excel_vo: ExcelVo, p_key_vo: KeyVo = None):
     if p_key == 'source_filename':
-        return p_export_vo.source_filename
+        return p_excel_vo.source_filename
     elif p_key == 'export_name':
-        return p_export_vo.export_name
+        return p_excel_vo.export_name
     elif p_key == 'export_class_name':
-        return p_export_vo.export_class_name
+        return p_excel_vo.export_class_name
     elif p_key_vo is not None:
         if p_key == 'property_name':
             return p_key_vo.key_client
         elif p_key == 'type':
-            return transform_tye(p_key_vo.type, p_export_vo.cfg.type_map)
+            return transform_tye(p_key_vo.type, p_excel_vo.cfg.type_map)
         elif p_key == 'comment':
             # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
             return p_key_vo.comment
@@ -202,9 +179,10 @@ def transform_tye(p_type, p_map):
 
 
 # 导出vo文件
-def export_vo_file(p_key):
+def export_vo_file(p_key, op):
     cfg = get_cfg_by_key(p_key)
     # 遍历文件夹内所有的xlsx文件
+    global file_count
     for fpath, dirnames, fnames in os.walk(cfg.source_path):
         # print('fpath', fpath)
         # print('dirname', dirnames)
@@ -214,7 +192,17 @@ def export_vo_file(p_key):
             file_url = os.path.join(fpath, fname)
             name, ext = os.path.splitext(file_url)
             if ext == '.xlsx':
-                create_config_vo(file_url, cfg)
+                wb = xlrd.open_workbook(filename=file_url)
+                sheet = wb.sheet_by_index(0)
+                if sheet.cell_type(0, 0) != 1:
+                    print('第一行第一格没有填写表名，无效的xlsx：' + fname)
+                    continue
+                excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
+                file_count += 1
+                if op & OP_VO == OP_VO:  # 导出vo类
+                    create_config_vo(excel_vo)
+                if op & OP_DATA == OP_DATA:  # 导出json数据
+                    print('fuck')
 
 
 # 导出配置数据文件
@@ -224,6 +212,7 @@ def export_vo_data():
 
 
 start = time.time()
-export_vo_file('as')
+# export_vo_file('as')
 end = time.time()
+print('输出 %s 个文件' % (file_count))
 print('总用时', end - start)
