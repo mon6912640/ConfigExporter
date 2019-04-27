@@ -161,7 +161,8 @@ def create_config_vo(p_file_path, p_cfg):
                 elif key_str == 'comment':
                     return v.comment
                 elif key_str == 'index':
-                    return v.index
+                    # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
+                    return str(v.index)
 
             result += re.sub('<#(.*?)#>', rpl_property, loop_str)
         # 这里需要把前后的换行干掉
