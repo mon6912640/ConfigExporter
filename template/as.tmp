@@ -7,6 +7,8 @@ package com.data.configData.excel
 	 */
 	public class <#export_class_name#>
 	{
+	    public static NAME:String = '<#export_name#>';
+
 		public function <#export_class_name#>()
 		{
 		}

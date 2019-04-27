@@ -4,12 +4,11 @@
  * 此文件由工具生成，请勿自行添加代码
  */
 type <#export_class_name#> = {
-
 <<<<
 	/**
 	 * <#comment#>
 	 */
-	<#property_name#> : <#type#>;
+	<#property_name#>:<#type#>;
 
 >>>>
 }

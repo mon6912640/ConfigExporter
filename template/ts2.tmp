@@ -5,6 +5,8 @@
  */
 class <#export_class_name#>
 {
+    public static NAME:string = '<#export_name#>';
+
 <<<<
 	/**
 	 * <#comment#>

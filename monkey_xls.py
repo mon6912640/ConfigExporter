@@ -16,7 +16,9 @@ class TempCfgVo:
     suffix = ''
     template = ''
     type_map = None
+    # 源文件夹路径
     source_path = ''
+    # 输出路径
     output_path = ''
 
     def __init__(self, p_cfg_data):

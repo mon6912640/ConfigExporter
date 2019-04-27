@@ -10,7 +10,7 @@ from monkey_xls import KeyVo, ExportVo, TempCfgVo
 
 file = 'G-goto跳转表.xlsx'
 
-# 模板配置文件 config.json
+# 模板配置文件 template.json
 template_config = None
 cfg_vo_map = {}
 
@@ -50,13 +50,13 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
 
         if not template_config:
             # 加载模板配置
-            with open('template\\config.json', 'r', encoding='utf-8') as f:
+            with open('template\\template.json', 'r', encoding='utf-8') as f:
                 # json_minify库支持json文件里面添加注释
                 template_config = json.loads(json_minify.json_minify(f.read()))
                 print('====加载模板文件配置成功')
 
         if p_key not in template_config:
-            print('config.json 中不存在 ' + p_key + ' 配置：')
+            print('template.json 中不存在 ' + p_key + ' 配置：')
             exit()
 
         cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
@@ -84,7 +84,12 @@ def create_config_vo(p_file_path, p_cfg):
 
     wb = xlrd.open_workbook(filename=p_file_path)
     sheet = wb.sheet_by_index(0)
-    export_vo.export_name = sheet.cell(0, 0).value
+    export_name = sheet.cell(0, 0).value
+    if sheet.cell_type(0, 0) != 1:
+        print('第一行第一格没有填写表名，无效的xlsx：' + export_vo.source_filename)
+        return
+
+    export_vo.export_name = export_name
 
     # 导出的文件名
     export_vo.export_filename = export_vo.export_name + 'Config' + '.' + export_vo.cfg.suffix
@@ -145,15 +150,15 @@ def create_config_vo(p_file_path, p_cfg):
             if not v.key_client:
                 continue
 
-            def rpl_property(m):
-                key_str = m.group(1)
+            def rpl_property(m1):
+                key_str = m1.group(1)
                 return replace_key(key_str, p_export_vo=export_vo, p_key_vo=v)
 
             result += re.sub('<#(.*?)#>', rpl_property, loop_str)
         # 这里需要把前后的换行干掉
         return result.rstrip('\n')
 
-    output_str = re.sub('^<<<<\s*$(.+?)^>>>>\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+    output_str = re.sub('^<<<<\\s*$(.+?)^>>>>\\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
 
     def rpl_export(m):
         key_str = m.group(1)
@@ -218,9 +223,7 @@ def export_vo_data():
     return
 
 
-# read_excel()
-# create_config_vo(file, 'ts3')
 start = time.time()
-export_vo_file('ts')
+export_vo_file('as')
 end = time.time()
 print('总用时', end - start)
