@@ -1,12 +1,11 @@
+import json
+import os.path
+import re
 import time
 
-import xlrd
-import json
-import re
-import os.path
 import json_minify
 
-from monkey_xls import KeyVo, ExcelVo, TempCfgVo
+from monkey_xls import *
 
 file = 'G-goto跳转表.xlsx'
 
@@ -15,12 +14,9 @@ template_config = None
 cfg_vo_map = {}
 file_count = 0
 
-# 类型常量
-TYPE_INT = 'Integer'
-TYPE_STRING = 'String'
-
-# 操作枚举
+# 生成配置vo
 OP_VO = 0b1
+# 生成json数据
 OP_DATA = 0b10
 
 
@@ -70,48 +66,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
 
 
 def create_config_vo(excel_vo: ExcelVo):
-    sheet = excel_vo.sheet
-
-    row_count = sheet.nrows
-    col_count = sheet.ncols
-    vo_list = []
-    comment_index_r = 0
-    client_key_index_r = 1
-    type_index_r = 2
-    server_key_index_r = 3
-    comment_rows = sheet.row(comment_index_r)
-    client_key_rows = sheet.row(client_key_index_r)
-    type_rows = sheet.row(type_index_r)
-    server_key_rows = sheet.row(server_key_index_r)
-
-    for i in range(1, col_count):
-        cell_client = client_key_rows[i]
-        cell_server = server_key_rows[i]
-        cell_type = type_rows[i]
-        cell_comment = comment_rows[i]
-        '''
-        表格数据 ctype： 
-        0 empty
-        1 string
-        2 number
-        3 date
-        4 boolean
-        5 error
-        '''
-        if cell_client.ctype != 1 and cell_server.ctype != 1:  # 跳过非字符串的格子
-            continue
-        t_type = TYPE_INT if cell_type.value == TYPE_INT else TYPE_STRING
-        t_vo = KeyVo(p_index=i, p_type=t_type)
-        vo_list.append(t_vo)
-        if cell_client.ctype == 1:
-            t_vo.key_client = cell_client.value
-            t_vo.export_client = True
-        if cell_server.ctype == 1:
-            t_vo.key_server = cell_server.value
-            t_vo.export_server = True
-        t_vo.comment = cell_comment.value
-        # print(i, t_vo.index, t_vo.type, t_vo.key_client, t_vo.key_server)
-
+    vo_list = excel_vo.key_vo_list
     # 跳过无key列表的数据列表
     if len(vo_list) == 0:
         return
@@ -199,20 +154,40 @@ def export_vo_file(p_key, op):
                     continue
                 excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
                 file_count += 1
-                if op & OP_VO == OP_VO:  # 导出vo类
+                if (op & OP_VO) == OP_VO:  # 导出vo类
                     create_config_vo(excel_vo)
-                if op & OP_DATA == OP_DATA:  # 导出json数据
-                    print('fuck')
+                if (op & OP_DATA) == OP_DATA:  # 导出json数据
+                    export_vo_data(excel_vo)
 
 
 # 导出配置数据文件
-def export_vo_data():
-    print('fuck')
-    return
+def export_vo_data(excel_vo: ExcelVo):
+    sheet = excel_vo.sheet
+    key_vo_list = excel_vo.key_vo_list
+    obj_list = []
+    for i in range(ExcelIndexEnum.data_start_r.value, sheet.nrows):
+        rows = sheet.row(i)
+        obj = {}
+        for v in key_vo_list:
+            cell = rows[v.index]
+            if v.type == KeyTypeEnum.TYPE_INT: #整型
+                if cell.ctype == 2: # number
+                    if cell.value % 1 == 0.0:
+                        value = int(cell.value)
+                    else:
+                        value = cell.value
+                else:
+                    value = 0
+            else:
+                value = str(cell.value)
+            obj[v.key_client] = value
+        obj_list.append(obj)
+        print(obj)
+
 
 
 start = time.time()
-# export_vo_file('as')
+export_vo_file('ts', OP_DATA)
 end = time.time()
 print('输出 %s 个文件' % (file_count))
 print('总用时', end - start)

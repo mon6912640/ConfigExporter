@@ -1,4 +1,40 @@
+from enum import Enum
+from typing import List
+
 import xlrd
+
+
+class KeyTypeEnum(Enum):
+    """
+    配置数据类型枚举
+    """
+    # 数字
+    TYPE_INT = 'Integer'
+    # 字符串
+    TYPE_STRING = 'String'
+
+
+class OpEnum(Enum):
+    """
+    操作类型枚举
+    """
+    # 生成配置vo
+    OP_VO = 0b1
+    # 生成json数据
+    OP_DATA = 0b10
+
+
+class ExcelIndexEnum(Enum):
+    """
+    excel关键index枚举
+    """
+    comment_r = 0
+    client_key_r = 1
+    type_r = 2
+    server_key_r = 3
+    data_start_r = 4
+
+    data_start_c = 1
 
 
 class KeyVo:
@@ -56,6 +92,7 @@ class ExcelVo:
     cfg: TempCfgVo = None
     # 表格数据引用
     sheet: xlrd.sheet.Sheet = None
+    __key_vo_list: List[KeyVo] = None
 
     def __init__(self, cfg, sheet, source_path, filename):
         self.cfg = cfg
@@ -89,3 +126,49 @@ class ExcelVo:
         """
         if self.sheet is not None:
             return self.export_name + 'Config'
+
+    @property
+    def key_vo_list(self):
+        """
+        获取Excel的KeyVo列表
+        :return:
+        """
+        if self.__key_vo_list is None:
+            col_count = self.sheet.ncols
+            self.__key_vo_list = []
+            for i in range(1, col_count):
+                comment_index_r = ExcelIndexEnum.comment_r.value
+                client_key_index_r = ExcelIndexEnum.client_key_r.value
+                type_index_r = ExcelIndexEnum.type_r.value
+                server_key_index_r = ExcelIndexEnum.server_key_r.value
+
+                comment_rows = self.sheet.row(comment_index_r)
+                client_key_rows = self.sheet.row(client_key_index_r)
+                type_rows = self.sheet.row(type_index_r)
+                server_key_rows = self.sheet.row(server_key_index_r)
+                cell_client = client_key_rows[i]
+                cell_server = server_key_rows[i]
+                cell_type = type_rows[i]
+                cell_comment = comment_rows[i]
+                '''
+                表格数据 ctype： 
+                0 empty
+                1 string
+                2 number
+                3 date
+                4 boolean
+                5 error
+                '''
+                if cell_client.ctype != 1 and cell_server.ctype != 1:  # 跳过非字符串的格子
+                    continue
+                t_type = KeyTypeEnum.TYPE_INT if cell_type.value == KeyTypeEnum.TYPE_INT else KeyTypeEnum.TYPE_STRING
+                t_vo = KeyVo(p_index=i, p_type=t_type)
+                self.__key_vo_list.append(t_vo)
+                if cell_client.ctype == 1:
+                    t_vo.key_client = cell_client.value
+                    t_vo.export_client = True
+                if cell_server.ctype == 1:
+                    t_vo.key_server = cell_server.value
+                    t_vo.export_server = True
+                t_vo.comment = cell_comment.value
+        return self.__key_vo_list
