@@ -57,7 +57,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
 
         if p_key not in template_config:
             print('config.json 中不存在 ' + p_key + ' 配置：')
-            exit();
+            exit()
 
         cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
 
