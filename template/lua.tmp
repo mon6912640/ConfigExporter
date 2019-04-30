@@ -6,6 +6,6 @@
 <#export_class_name#> = {
 <<<<
 	--<#comment#>
-	<#property_name#> = <#index#>,
+	<#property_name#> = "<#property_name#>",
 >>>>
 }

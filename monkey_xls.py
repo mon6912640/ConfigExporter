@@ -59,6 +59,15 @@ class TempCfgVo:
     source_path = ''
     # 输出路径
     output_path = ''
+    # 数据json输出路径
+    json_path = ''
+    # 是否打包在同一个json文件中
+    json_pack_in_one = False
+    # 压缩方式
+    json_compress = ''
+    # 额外副本路径
+    json_copy_path = ''
+
     __str_tmp: str = None
 
     def __init__(self, p_cfg_data):
@@ -67,6 +76,10 @@ class TempCfgVo:
         self.type_map = p_cfg_data['typeMap']
         self.source_path = p_cfg_data['sourcePath']
         self.output_path = p_cfg_data['outputPath']
+        self.json_path = p_cfg_data['jsonPath']
+        self.json_pack_in_one = p_cfg_data['jsonPackInOne']
+        self.json_compress = p_cfg_data['jsonCompress']
+        self.json_copy_path = p_cfg_data['jsonCopyPath']
 
     @property
     def str_tmp(self):

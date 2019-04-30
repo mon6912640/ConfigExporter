@@ -7,6 +7,18 @@ class <#export_class_name#>
 {
     public static NAME:string = '<#export_name#>';
 
+    public initData(pData:Object)
+    {
+        for(let k in pData)
+        {
+            try {
+                this[k] = pData[k];
+            }
+            catch (error) {
+            }
+        }
+    }
+
 <<<<
 	/**
 	 * <#comment#>

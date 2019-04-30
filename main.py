@@ -5,6 +5,8 @@ import time
 
 import json_minify
 
+import zlib
+
 from monkey_xls import *
 
 file = 'G-goto跳转表.xlsx'
@@ -137,45 +139,19 @@ def transform_tye(p_type, p_map):
         return None
 
 
-# 导出vo文件
-def main_run(p_key, op):
-    cfg = get_cfg_by_key(p_key)
-    # 遍历文件夹内所有的xlsx文件
-    global file_count
-    for fpath, dirnames, fnames in os.walk(cfg.source_path):
-        # print('fpath', fpath)
-        # print('dirname', dirnames)
-        # print('fnames', fnames)
-        # print('--------------')
-        for fname in fnames:
-            file_url = os.path.join(fpath, fname)
-            name, ext = os.path.splitext(file_url)
-            if fname.find('~$G-') > -1:
-                continue
-            if ext == '.xlsx':
-                wb = xlrd.open_workbook(filename=file_url)
-                sheet = wb.sheet_by_index(0)
-                if sheet.cell_type(0, 0) != 1:
-                    print('第一行第一格没有填写表名，无效的xlsx：' + fname)
-                    continue
-                excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
-                file_count += 1
-                if (op & OP_VO) == OP_VO:  # 导出vo类
-                    export_config_vo(excel_vo)
-                if (op & OP_DATA) == OP_DATA:  # 导出json数据
-                    export_vo_data(excel_vo)
-
-
 # 导出配置数据文件
-def export_vo_data(excel_vo: ExcelVo):
+def export_json_data(excel_vo: ExcelVo, json_map):
     sheet = excel_vo.sheet
     key_vo_list = excel_vo.key_vo_list
-    obj_list = []
+    # obj_list = []
+    obj_list = {}
     for i in range(ExcelIndexEnum.data_start_r.value, sheet.nrows):
         rows = sheet.row(i)
         obj = {}
         ok_flag = True
         for v in key_vo_list:
+            if not v.key_client:  # 跳过没有key名的
+                continue
             cell = rows[v.index]
             # 跳过id为空的行
             if v.index == ExcelIndexEnum.data_start_c.value and cell.ctype == 0:
@@ -193,19 +169,101 @@ def export_vo_data(excel_vo: ExcelVo):
                 value = str(cell.value)
             obj[v.key_client] = value
         if ok_flag:
-            obj_list.append(obj)
+            # obj_list.append(obj)
+            obj_list[obj['id']] = obj
         # print(obj)
-    json_obj = json.dumps(obj_list, indent=4, ensure_ascii=False)
-    path = os.path.join('data', excel_vo.export_name + '.json')
-    root = os.path.dirname(path)
-    if not os.path.exists(root):
-        os.makedirs(root)  # 递归创建文件夹
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(json_obj)
+    json_map[excel_vo.export_name] = obj_list
+
+    # 散文件输出
+    if not excel_vo.cfg.json_pack_in_one:
+        json_obj_min = json.dumps(obj_list, ensure_ascii=False, separators=(',', ':'))
+        if not excel_vo.cfg.json_compress:  # 不压缩
+            # 未格式化的json
+            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.json')
+            root = os.path.dirname(path)
+            if not os.path.exists(root):
+                os.makedirs(root)  # 递归创建文件夹
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(json_obj_min)
+        elif excel_vo.cfg.json_compress == 'zlib':
+            bytes = json_obj_min.encode(encoding='utf-8')
+            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
+            root = os.path.dirname(path)
+            if not os.path.exists(root):
+                os.makedirs(root)  # 递归创建文件夹
+            with open(path, 'wb', encoding='utf-8') as f:
+                f.write(zlib.compress(bytes))
+
+    if excel_vo.cfg.json_copy_path:
+        # 格式化过的json（便于人员察看检查）
+        json_obj_format = json.dumps(obj_list, indent=4, ensure_ascii=False)
+        path = os.path.join(excel_vo.cfg.json_copy_path, excel_vo.export_name + '.json')
+        root = os.path.dirname(path)
+        if not os.path.exists(root):
+            os.makedirs(root)
+        with open(path, 'w') as f:
+            f.write(json_obj_format)
+
+
+# 导出vo文件
+def main_run(p_key, op):
+    cfg = get_cfg_by_key(p_key)
+    # 遍历文件夹内所有的xlsx文件
+    global file_count
+    json_map = {}
+    for fpath, dirnames, fnames in os.walk(cfg.source_path):
+        # print('fpath', fpath)
+        # print('dirname', dirnames)
+        # print('fnames', fnames)
+        # print('--------------')
+        for fname in fnames:
+            file_url = os.path.join(fpath, fname)
+            name, ext = os.path.splitext(file_url)
+            if fname.find('~$G-') > -1:  # 跳过临时打开xlsx文件
+                continue
+            if ext == '.xlsx':
+                wb = xlrd.open_workbook(filename=file_url)
+                sheet = wb.sheet_by_index(0)
+                if sheet.cell_type(0, 0) != 1:
+                    print('第一行第一格没有填写表名，无效的xlsx：' + fname)
+                    continue
+                excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
+                file_count += 1
+                if (op & OP_VO) == OP_VO:  # 导出vo类
+                    export_config_vo(excel_vo)
+                if (op & OP_DATA) == OP_DATA:  # 导出json数据
+                    export_json_data(excel_vo, json_map)
+
+    if cfg.json_pack_in_one:
+        json_pack = json.dumps(json_map, ensure_ascii=False, separators=(',', ':'))
+        if not cfg.json_compress: # 不压缩
+            path = os.path.join(cfg.json_path, '0config' + '.json')
+            root = os.path.dirname(path)
+            if not os.path.exists(root):
+                os.makedirs(root)  # 递归创建文件夹
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(json_pack)
+        elif cfg.json_compress == 'zlib':
+            bytes = json_pack.encode(encoding='utf-8')
+            path = os.path.join(cfg.json_path, '0config' + '.zlib')
+            root = os.path.dirname(path)
+            if not os.path.exists(root):
+                os.makedirs(root)  # 递归创建文件夹
+            with open(path, 'wb') as f:
+                f.write(zlib.compress(bytes))
+
+        if cfg.json_copy_path:
+            json_pack = json.dumps(json_map, ensure_ascii=False, indent=4)
+            path = os.path.join(cfg.json_copy_path, '0config' + '.json')
+            root = os.path.dirname(path)
+            if not os.path.exists(root):
+                os.makedirs(root)  # 递归创建文件夹
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(json_pack)
 
 
 start = time.time()
-main_run('ts2', OP_DATA | OP_VO)
+main_run('ts', OP_DATA | OP_VO)
 end = time.time()
 print('输出 %s 个文件' % (file_count))
 print('总用时', end - start)
