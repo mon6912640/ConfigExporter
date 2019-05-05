@@ -9,8 +9,6 @@ import json_minify
 
 from monkey_xls import *
 
-file = 'G-goto跳转表.xlsx'
-
 # 模板配置文件 template.json
 template_config = None
 cfg_vo_map = {}
@@ -172,7 +170,7 @@ def export_json_data(excel_vo: ExcelVo, json_map):
             f.write(json_obj_min)
 
         if excel_vo.cfg.json_compress == 'zlib':
-            zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
+            zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.' + excel_vo.cfg.compress_suffix)
             file_compress(path, zlib_path, delete_source=True)
 
     if excel_vo.cfg.json_copy_path:
@@ -210,7 +208,7 @@ def main_run(p_key, op):
                 for fname in files:
                     file_url = os.path.join(root, fname)
                     name, ext = os.path.splitext(file_url)
-                    if ext == '.json' or ext == '.zlib':
+                    if ext == '.json' or ext == cfg.compress_suffix:
                         os.remove(file_url)
 
     global file_count
@@ -246,7 +244,7 @@ def main_run(p_key, op):
             f.write(json_pack)
 
         if cfg.json_compress == 'zlib':  # zlib压缩
-            zlib_path = os.path.join(cfg.json_path, '0config' + '.zlib')
+            zlib_path = os.path.join(cfg.json_path, '0config' + '.' + cfg.compress_suffix)
             file_compress(path, zlib_path, delete_source=True)
 
         if cfg.json_copy_path:

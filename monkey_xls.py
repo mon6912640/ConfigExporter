@@ -65,6 +65,8 @@ class TempCfgVo:
     json_pack_in_one = False
     # 压缩方式
     json_compress = ''
+    # 压缩文件后缀名
+    compress_suffix = ''
     # 额外副本路径
     json_copy_path = ''
     # 每次生成输出前是否清除旧文件
@@ -83,6 +85,7 @@ class TempCfgVo:
         self.json_compress = p_cfg_data['jsonCompress']
         self.json_copy_path = p_cfg_data['jsonCopyPath']
         self.clean = p_cfg_data['clean']
+        self.compress_suffix = p_cfg_data['compressSuffix']
 
     @property
     def str_tmp(self):
