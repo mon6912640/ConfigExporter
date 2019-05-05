@@ -184,23 +184,18 @@ def export_json_data(excel_vo: ExcelVo, json_map):
 
     # 散文件输出
     if not excel_vo.cfg.json_pack_in_one:
+        # 未格式化的json
         json_obj_min = json.dumps(obj_list, ensure_ascii=False, separators=(',', ':'))
-        if not excel_vo.cfg.json_compress:  # 不压缩
-            # 未格式化的json
-            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.json')
-            root = os.path.dirname(path)
-            if not os.path.exists(root):
-                os.makedirs(root)  # 递归创建文件夹
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(json_obj_min)
-        elif excel_vo.cfg.json_compress == 'zlib':
-            bts = json_obj_min.encode(encoding='utf-8')
-            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
-            root = os.path.dirname(path)
-            if not os.path.exists(root):
-                os.makedirs(root)  # 递归创建文件夹
-            with open(path, 'wb', encoding='utf-8') as f:
-                f.write(zlib.compress(bts))
+        path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.json')
+        root = os.path.dirname(path)
+        if not os.path.exists(root):
+            os.makedirs(root)  # 递归创建文件夹
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(json_obj_min)
+
+        if excel_vo.cfg.json_compress == 'zlib':
+            zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
+            file_compress(path, zlib_path, delete_source=True)
 
     if excel_vo.cfg.json_copy_path:
         # 格式化过的json（便于人员察看检查）
@@ -209,7 +204,7 @@ def export_json_data(excel_vo: ExcelVo, json_map):
         root = os.path.dirname(path)
         if not os.path.exists(root):
             os.makedirs(root)
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(json_obj_format)
 
 
@@ -303,7 +298,7 @@ def file_decompress(spath, tpath):
 
 
 start = time.time()
-main_run('ts', OP_DATA)
+main_run('ts', OP_DATA | OP_VO)
 # file_compress('./data/0config.json', './data/0config.zlib')
 # file_decompress('./data/0config.zlib', './data/fuck.json')
 end = time.time()
