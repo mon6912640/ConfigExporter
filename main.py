@@ -186,13 +186,13 @@ def export_json_data(excel_vo: ExcelVo, json_map):
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(json_obj_min)
         elif excel_vo.cfg.json_compress == 'zlib':
-            bytes = json_obj_min.encode(encoding='utf-8')
+            bts = json_obj_min.encode(encoding='utf-8')
             path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
             root = os.path.dirname(path)
             if not os.path.exists(root):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'wb', encoding='utf-8') as f:
-                f.write(zlib.compress(bytes))
+                f.write(zlib.compress(bts))
 
     if excel_vo.cfg.json_copy_path:
         # 格式化过的json（便于人员察看检查）
@@ -245,13 +245,13 @@ def main_run(p_key, op):
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(json_pack)
         elif cfg.json_compress == 'zlib':  # zlib压缩
-            bytes = json_pack.encode(encoding='utf-8')
+            bts = json_pack.encode(encoding='utf-8')
             path = os.path.join(cfg.json_path, '0config' + '.zlib')
             root = os.path.dirname(path)
             if not os.path.exists(root):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'wb') as f:
-                f.write(zlib.compress(bytes, zlib.Z_BEST_COMPRESSION))
+                f.write(zlib.compress(bts, zlib.Z_BEST_COMPRESSION))
                 # f.write(bytes)
 
         if cfg.json_copy_path:
@@ -265,9 +265,9 @@ def main_run(p_key, op):
 
 
 # zlib.compressobj 用来压缩数据流，用于文件传输
-def file_compress(beginFile, zlibFile, level):
-    infile = open(beginFile, "rb")
-    zfile = open(zlibFile, "wb")
+def file_compress(begin_file, zlib_file, level):
+    infile = open(begin_file, "rb")
+    zfile = open(zlib_file, "wb")
     compressobj = zlib.compressobj(level)  # 压缩对象
     data = infile.read(1024)  # 1024为读取的size参数
     while data:
@@ -276,15 +276,15 @@ def file_compress(beginFile, zlibFile, level):
     zfile.write(compressobj.flush())  # compressobj.flush()包含剩余压缩输出的字节对象，将剩余的字节内容写入到目标文件中
 
 
-def file_decompress(zlibFile, endFile):
-    zlibFile = open(zlibFile, "rb")
-    endFile = open(endFile, "wb")
+def file_decompress(zlib_file, end_file):
+    zlib_file = open(zlib_file, "rb")
+    end_file = open(end_file, "wb")
     decompressobj = zlib.decompressobj()
-    data = zlibFile.read(1024)
+    data = zlib_file.read(1024)
     while data:
-        endFile.write(decompressobj.decompress(data))
-        data = zlibFile.read(1024)
-    endFile.write(decompressobj.flush())
+        end_file.write(decompressobj.decompress(data))
+        data = zlib_file.read(1024)
+    end_file.write(decompressobj.flush())
 
 
 def read_zlib_file():
@@ -307,5 +307,5 @@ main_run('ts', OP_DATA)
 # file_decompress('./data/config.zip', './data/config.json')
 
 end = time.time()
-print('输出 %s 个文件' % (file_count))
+print('输出 %s 个文件' % file_count)
 print('总用时', end - start)
