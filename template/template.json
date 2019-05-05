@@ -5,7 +5,7 @@
 
   "ts": {
     //源路径 xlsx文件所在源路径
-    "sourcePath": "D:\\work\\plan\\配置表",
+    "sourcePath": "./source",
     //输出路径 vo对象类文件输出路径
     "outputPath": "./output",
     //数据json输出路径
@@ -16,6 +16,8 @@
     "jsonCompress": "zlib",
     //填上路径则会额外输出json表的可读副本，方便检查输出数据的错误，留空则不输出副本
     "jsonCopyPath": "./copy",
+    //每次生成输出前是否清除旧文件
+    "clean": true,
     //导出类文件的后缀名
     "suffix": "ts",
     //模板文件名称

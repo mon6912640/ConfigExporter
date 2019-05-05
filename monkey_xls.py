@@ -67,6 +67,8 @@ class TempCfgVo:
     json_compress = ''
     # 额外副本路径
     json_copy_path = ''
+    # 每次生成输出前是否清除旧文件
+    clean = False
 
     __str_tmp: str = None
 
@@ -80,6 +82,7 @@ class TempCfgVo:
         self.json_pack_in_one = p_cfg_data['jsonPackInOne']
         self.json_compress = p_cfg_data['jsonCompress']
         self.json_copy_path = p_cfg_data['jsonCopyPath']
+        self.clean = p_cfg_data['clean']
 
     @property
     def str_tmp(self):
