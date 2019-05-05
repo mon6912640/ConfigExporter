@@ -9,7 +9,7 @@ import json_minify
 
 from monkey_xls import *
 
-# 模板配置文件 template.json
+# 模板配置文件 0template.json
 template_config = None
 cfg_vo_map = {}
 file_count = 0
@@ -29,13 +29,13 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
 
         if not template_config:
             # 加载模板配置
-            with open('template\\template.json', 'r', encoding='utf-8') as f:
+            with open('template\\0template.json', 'r', encoding='utf-8') as f:
                 # json_minify库支持json文件里面添加注释
                 template_config = json.loads(json_minify.json_minify(f.read()))
                 print('====加载模板文件配置成功')
 
         if p_key not in template_config:
-            print('template.json 中不存在 ' + p_key + ' 配置：')
+            print('0template.json 中不存在 ' + p_key + ' 配置：')
             exit()
 
         cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
