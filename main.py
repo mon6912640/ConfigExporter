@@ -234,23 +234,25 @@ def main_run(p_key, op):
                 if (op & OP_DATA) == OP_DATA:  # 导出json数据
                     export_json_data(excel_vo, json_map)
 
+    # 所有配置打包到一个文件中
     if cfg.json_pack_in_one:
         json_pack = json.dumps(json_map, ensure_ascii=False, separators=(',', ':'))
-        if not cfg.json_compress: # 不压缩
+        if not cfg.json_compress:  # 不压缩
             path = os.path.join(cfg.json_path, '0config' + '.json')
             root = os.path.dirname(path)
             if not os.path.exists(root):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(json_pack)
-        elif cfg.json_compress == 'zlib':
+        elif cfg.json_compress == 'zlib':  # zlib压缩
             bytes = json_pack.encode(encoding='utf-8')
             path = os.path.join(cfg.json_path, '0config' + '.zlib')
             root = os.path.dirname(path)
             if not os.path.exists(root):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'wb') as f:
-                f.write(zlib.compress(bytes))
+                f.write(zlib.compress(bytes, zlib.Z_BEST_COMPRESSION))
+                # f.write(bytes)
 
         if cfg.json_copy_path:
             json_pack = json.dumps(json_map, ensure_ascii=False, indent=4)
@@ -262,8 +264,48 @@ def main_run(p_key, op):
                 f.write(json_pack)
 
 
+# zlib.compressobj 用来压缩数据流，用于文件传输
+def file_compress(beginFile, zlibFile, level):
+    infile = open(beginFile, "rb")
+    zfile = open(zlibFile, "wb")
+    compressobj = zlib.compressobj(level)  # 压缩对象
+    data = infile.read(1024)  # 1024为读取的size参数
+    while data:
+        zfile.write(compressobj.compress(data))  # 写入压缩数据
+        data = infile.read(1024)  # 继续读取文件中的下一个size的内容
+    zfile.write(compressobj.flush())  # compressobj.flush()包含剩余压缩输出的字节对象，将剩余的字节内容写入到目标文件中
+
+
+def file_decompress(zlibFile, endFile):
+    zlibFile = open(zlibFile, "rb")
+    endFile = open(endFile, "wb")
+    decompressobj = zlib.decompressobj()
+    data = zlibFile.read(1024)
+    while data:
+        endFile.write(decompressobj.decompress(data))
+        data = zlibFile.read(1024)
+    endFile.write(decompressobj.flush())
+
+
+def read_zlib_file():
+    # with open('data/0config.json', 'rb') as f:
+    #     buffs = f.read()
+    #     bytes = zlib.decompress(buffs)
+    #     zlib.decompress()
+    #     mystr = bytes.decode(encoding='utf-8')
+    #     # mystr = buffs.decode(encoding='utf-8')
+    #     print(mystr)
+    file_compress('./data/0config.json', './data/0config.zlib', 9)
+
+
 start = time.time()
-main_run('ts', OP_DATA | OP_VO)
+main_run('ts', OP_DATA)
+# read_zlib_file()
+
+# file_compress('./data/0config.json', './data/0config.zlib', 9)
+#
+# file_decompress('./data/config.zip', './data/config.json')
+
 end = time.time()
 print('输出 %s 个文件' % (file_count))
 print('总用时', end - start)
