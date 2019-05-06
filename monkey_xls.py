@@ -14,16 +14,6 @@ class KeyTypeEnum(Enum):
     TYPE_STRING = 'String'
 
 
-class OpEnum(Enum):
-    """
-    操作类型枚举
-    """
-    # 生成配置vo
-    OP_VO = 0b1
-    # 生成json数据
-    OP_DATA = 0b10
-
-
 class ExcelIndexEnum(Enum):
     """
     excel关键index枚举
@@ -75,20 +65,38 @@ class TempCfgVo:
     __str_tmp: str = None
 
     def __init__(self, p_cfg_data):
-        self.suffix = p_cfg_data['suffix']
-        self.template = p_cfg_data['template']
-        self.type_map = p_cfg_data['typeMap']
-        self.source_path = p_cfg_data['sourcePath']
-        self.output_path = p_cfg_data['outputPath']
-        self.json_path = p_cfg_data['jsonPath']
-        self.json_pack_in_one = p_cfg_data['jsonPackInOne']
-        self.json_compress = p_cfg_data['jsonCompress']
-        self.json_copy_path = p_cfg_data['jsonCopyPath']
-        self.clean = p_cfg_data['clean']
-        self.compress_suffix = p_cfg_data['compressSuffix']
+        self.set_data(p_cfg_data)
+
+    def set_data(self, p_cfg_data):
+        if 'suffix' in p_cfg_data:
+            self.suffix = p_cfg_data['suffix']
+        if 'template' in p_cfg_data:
+            self.template = p_cfg_data['template']
+        if 'typeMap' in p_cfg_data:
+            self.type_map = p_cfg_data['typeMap']
+        if 'sourcePath' in p_cfg_data:
+            self.source_path = p_cfg_data['sourcePath']
+        if 'outputPath' in p_cfg_data:
+            self.output_path = p_cfg_data['outputPath']
+        if 'jsonPath' in p_cfg_data:
+            self.json_path = p_cfg_data['jsonPath']
+        if 'jsonPackInOne' in p_cfg_data:
+            self.json_pack_in_one = p_cfg_data['jsonPackInOne']
+        if 'jsonCompress' in p_cfg_data:
+            self.json_compress = p_cfg_data['jsonCompress']
+        if 'jsonCopyPath' in p_cfg_data:
+            self.json_copy_path = p_cfg_data['jsonCopyPath']
+        if 'clean' in p_cfg_data:
+            self.clean = p_cfg_data['clean']
+        if 'compressSuffix' in p_cfg_data:
+            self.compress_suffix = p_cfg_data['compressSuffix']
 
     @property
     def str_tmp(self):
+        """
+        模板文本
+        :return:
+        """
         if self.__str_tmp is None:
             '''
             在Python3，可以通过open函数的newline参数来控制Universal new line mode

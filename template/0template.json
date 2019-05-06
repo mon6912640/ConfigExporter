@@ -3,13 +3,33 @@
    * 这里可以配置模板相关的配置，该json文件支持注释（需要Python3的第三方json_minify库）
    */
 
+  //====== 基础配置 ======
+  "base": {
+    //源路径 xlsx文件所在源路径
+    "sourcePath": "./source",
+    //数据json输出路径
+    "jsonPath": "./data",
+    //是否打包在同一个json文件中
+    "jsonPackInOne": true,
+    //数据压缩方式
+    "jsonCompress": "zlib",
+    //压缩文件后缀名
+    "compressSuffix": "zip",
+    //填上路径则会额外输出json表的可读副本，方便检查输出数据的错误，留空则不输出副本
+    "jsonCopyPath": "./copy",
+    //每次生成输出前是否清除旧文件
+    "clean": true
+  },
+  //====================
+
+
+
+  //以下模板配置可以覆盖基础配置的字段，省略则使用基础配置的值
   "ts": {
     //源路径 xlsx文件所在源路径
     "sourcePath": "./source",
     //输出路径 vo对象类文件输出路径
     "outputPath": "./output",
-    //数据json输出路径
-    "jsonPath": "./data",
     //是否打包在同一个json文件中
     "jsonPackInOne": true,
     //数据压缩方式
@@ -43,7 +63,7 @@
   },
 
   "as": {
-    "sourcePath": "D:\\work\\plan\\配置表",
+//    "sourcePath": "D:\\work\\plan\\配置表",
     "outputPath": "./output",
     "suffix": "as",
     "template": "as.tmp",

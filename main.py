@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import os.path
@@ -38,7 +39,12 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
             print('0template.json 中不存在 ' + p_key + ' 配置：')
             exit()
 
-        cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
+        if 'base' in template_config:  # 有基础配置先设置基础配置
+            cfg_vo = TempCfgVo(template_config['base'])
+            cfg_vo.set_data(template_config[p_key])
+        else:
+            cfg_vo = TempCfgVo(template_config[p_key])
+        cfg_vo_map[p_key] = cfg_vo
 
     return cfg_vo_map[p_key]
 
@@ -190,14 +196,14 @@ def main_run(p_key, op):
 
     # 清除旧文件
     if cfg.clean:
-        if (op & OP_VO) and cfg.output_path:
+        if ((op & OP_VO) == OP_VO) and cfg.output_path:
             for root, dirs, files in os.walk(cfg.output_path):
                 for fname in files:
                     file_url = os.path.join(root, fname)
                     name, ext = os.path.splitext(file_url)
                     if ext == '.' + cfg.suffix:  # 删除指定格式的旧文件
                         os.remove(file_url)
-        if (op & OP_DATA) and cfg.json_copy_path:
+        if ((op & OP_DATA) == OP_DATA) and cfg.json_copy_path:
             for root, dirs, files in os.walk(cfg.json_copy_path):
                 for fname in files:
                     file_url = os.path.join(root, fname)
@@ -234,7 +240,7 @@ def main_run(p_key, op):
                     export_json_data(excel_vo, json_map)
 
     # 所有配置打包到一个文件中
-    if cfg.json_pack_in_one:
+    if (op & OP_DATA) == OP_DATA and cfg.json_pack_in_one:
         json_pack = json.dumps(json_map, ensure_ascii=False, separators=(',', ':'))
         path = os.path.join(cfg.json_path, '0config' + '.json')
         root = os.path.dirname(path)
@@ -299,8 +305,29 @@ def file_decompress(spath, tpath):
     file_target.close()
 
 
+parser = argparse.ArgumentParser(description='帮助信息')
+parser.add_argument('--template', type=str, default='as', help='0template.json中配置的模板键名')
+parser.add_argument('--exportJson', type=int, default=0, help='是否输出json，1输出，0不输出，默认为1')
+parser.add_argument('--exportStruct', type=int, default=1, help='是否输出语言结构体，1输出，0不输出，默认为1')
+
+args = parser.parse_args()
+
+print(args.template)
+print(args.exportJson)
+print(args.exportStruct)
+
+op_value = 0
+if args.exportJson:
+    op_value |= OP_DATA
+if args.exportStruct:
+    op_value |= OP_VO
+
+if not op_value:
+    print('无操作，退出')
+    exit()
+
 start = time.time()
-main_run('ts', OP_DATA | OP_VO)
+main_run(args.template, op_value)
 # file_compress('./data/0config.json', './data/0config.zlib')
 # file_decompress('./data/0config.zlib', './data/fuck.json')
 end = time.time()
