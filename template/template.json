@@ -5,7 +5,7 @@
 
   "ts": {
     //源路径 xlsx文件所在源路径
-    "sourcePath": "D:\\work\\plan\\配置表",
+    "sourcePath": "./source",
     //输出路径 vo对象类文件输出路径
     "outputPath": "./output",
     //数据json输出路径
