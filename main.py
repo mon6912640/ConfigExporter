@@ -9,9 +9,7 @@ import json_minify
 
 from monkey_xls import *
 
-file = 'G-goto跳转表.xlsx'
-
-# 模板配置文件 template.json
+# 模板配置文件 0template.json
 template_config = None
 cfg_vo_map = {}
 file_count = 0
@@ -20,28 +18,6 @@ file_count = 0
 OP_VO = 0b1
 # 生成json数据
 OP_DATA = 0b10
-
-
-def read_excel():
-    wb = xlrd.open_workbook(filename=file)  # 打开文件
-    print(wb.sheet_names())  # 获取所有表格名字
-    sheet1 = wb.sheet_by_index(0)  # 通过索引获取表格
-    sheet2 = wb.sheet_by_name('Sheet1')  # 通过名字获取表格
-    print(sheet1, sheet2)
-    print(sheet1.name, sheet1.nrows, sheet1.ncols)
-    rows = sheet1.row_values(2)  # 获取一整行内容
-    cols = sheet1.col_values(3)  # 获取一整列内容
-    print(rows)
-    print(cols)
-    print(sheet1.cell(0, 0))
-    print(sheet1.cell(0, 0).value)  # 获取指定行列的内容
-    print(sheet1.cell_value(0, 0))
-    print(sheet1.col(0)[0].value)
-    print(sheet1.cell(4, 1))
-    print(sheet1.cell(4, 1).value)
-    print(sheet1.cell(4, 2).value)
-    print(sheet1.row_values(4))
-    # 表格数据 ctype： 0 empty,1 string, 2 number, 3 date, 4 boolean, 5 error
 
 
 # 通过key获取模板配置数据
@@ -53,13 +29,13 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
 
         if not template_config:
             # 加载模板配置
-            with open('template\\template.json', 'r', encoding='utf-8') as f:
+            with open('template\\0template.json', 'r', encoding='utf-8') as f:
                 # json_minify库支持json文件里面添加注释
                 template_config = json.loads(json_minify.json_minify(f.read()))
                 print('====加载模板文件配置成功')
 
         if p_key not in template_config:
-            print('template.json 中不存在 ' + p_key + ' 配置：')
+            print('0template.json 中不存在 ' + p_key + ' 配置：')
             exit()
 
         cfg_vo_map[p_key] = TempCfgVo(template_config[p_key])
@@ -184,23 +160,18 @@ def export_json_data(excel_vo: ExcelVo, json_map):
 
     # 散文件输出
     if not excel_vo.cfg.json_pack_in_one:
+        # 未格式化的json
         json_obj_min = json.dumps(obj_list, ensure_ascii=False, separators=(',', ':'))
-        if not excel_vo.cfg.json_compress:  # 不压缩
-            # 未格式化的json
-            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.json')
-            root = os.path.dirname(path)
-            if not os.path.exists(root):
-                os.makedirs(root)  # 递归创建文件夹
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(json_obj_min)
-        elif excel_vo.cfg.json_compress == 'zlib':
-            bts = json_obj_min.encode(encoding='utf-8')
-            path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.zlib')
-            root = os.path.dirname(path)
-            if not os.path.exists(root):
-                os.makedirs(root)  # 递归创建文件夹
-            with open(path, 'wb', encoding='utf-8') as f:
-                f.write(zlib.compress(bts))
+        path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.json')
+        root = os.path.dirname(path)
+        if not os.path.exists(root):
+            os.makedirs(root)  # 递归创建文件夹
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(json_obj_min)
+
+        if excel_vo.cfg.json_compress == 'zlib':
+            zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.' + excel_vo.cfg.compress_suffix)
+            file_compress(path, zlib_path, delete_source=True)
 
     if excel_vo.cfg.json_copy_path:
         # 格式化过的json（便于人员察看检查）
@@ -209,21 +180,41 @@ def export_json_data(excel_vo: ExcelVo, json_map):
         root = os.path.dirname(path)
         if not os.path.exists(root):
             os.makedirs(root)
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(json_obj_format)
 
 
 # 导出vo文件
 def main_run(p_key, op):
     cfg = get_cfg_by_key(p_key)
-    # 遍历文件夹内所有的xlsx文件
+
+    # 清除旧文件
+    if cfg.clean:
+        if (op & OP_VO) and cfg.output_path:
+            for root, dirs, files in os.walk(cfg.output_path):
+                for fname in files:
+                    file_url = os.path.join(root, fname)
+                    name, ext = os.path.splitext(file_url)
+                    if ext == '.' + cfg.suffix:  # 删除指定格式的旧文件
+                        os.remove(file_url)
+        if (op & OP_DATA) and cfg.json_copy_path:
+            for root, dirs, files in os.walk(cfg.json_copy_path):
+                for fname in files:
+                    file_url = os.path.join(root, fname)
+                    name, ext = os.path.splitext(file_url)
+                    if ext == '.json':
+                        os.remove(file_url)
+            for root, dirs, files in os.walk(cfg.json_path):
+                for fname in files:
+                    file_url = os.path.join(root, fname)
+                    name, ext = os.path.splitext(file_url)
+                    if ext == '.json' or ext == cfg.compress_suffix:
+                        os.remove(file_url)
+
     global file_count
     json_map = {}
+    # 遍历文件夹内所有的xlsx文件
     for fpath, dirnames, fnames in os.walk(cfg.source_path):
-        # print('fpath', fpath)
-        # print('dirname', dirnames)
-        # print('fnames', fnames)
-        # print('--------------')
         for fname in fnames:
             file_url = os.path.join(fpath, fname)
             name, ext = os.path.splitext(file_url)
@@ -253,15 +244,8 @@ def main_run(p_key, op):
             f.write(json_pack)
 
         if cfg.json_compress == 'zlib':  # zlib压缩
-            zlib_path = os.path.join(cfg.json_path, '0config' + '.zlib')
+            zlib_path = os.path.join(cfg.json_path, '0config' + '.' + cfg.compress_suffix)
             file_compress(path, zlib_path, delete_source=True)
-            # bts = json_pack.encode(encoding='utf-8')
-            # path = os.path.join(cfg.json_path, '0config' + '.zlib')
-            # root = os.path.dirname(path)
-            # if not os.path.exists(root):
-            #     os.makedirs(root)  # 递归创建文件夹
-            # with open(path, 'wb') as f:
-            #     f.write(zlib.compress(bts, zlib.Z_BEST_COMPRESSION))
 
         if cfg.json_copy_path:
             json_pack = json.dumps(json_map, ensure_ascii=False, indent=4)
@@ -273,8 +257,15 @@ def main_run(p_key, op):
                 f.write(json_pack)
 
 
-# zlib.compressobj 用来压缩数据流，用于文件传输
 def file_compress(spath, tpath, level=9, delete_source=False):
+    """
+    zlib.compressobj 用来压缩数据流，用于文件传输
+    :param spath:源文件
+    :param tpath:目标文件
+    :param level:压缩等级，越高压缩率越大，对应解压时间也变大
+    :param delete_source:是否删除源文件，默认不删除
+    :return:
+    """
     file_source = open(spath, 'rb')
     file_target = open(tpath, 'wb')
     compress_obj = zlib.compressobj(level, wbits=-15, method=zlib.DEFLATED)  # 压缩对象
@@ -290,6 +281,12 @@ def file_compress(spath, tpath, level=9, delete_source=False):
 
 
 def file_decompress(spath, tpath):
+    """
+    解压文件
+    :param spath:源文件
+    :param tpath:目标文件
+    :return:
+    """
     file_source = open(spath, 'rb')
     file_target = open(tpath, 'wb')
     decompress_obj = zlib.decompressobj(wbits=-15)
@@ -303,7 +300,7 @@ def file_decompress(spath, tpath):
 
 
 start = time.time()
-main_run('ts', OP_DATA)
+main_run('ts', OP_DATA | OP_VO)
 # file_compress('./data/0config.json', './data/0config.zlib')
 # file_decompress('./data/0config.zlib', './data/fuck.json')
 end = time.time()
