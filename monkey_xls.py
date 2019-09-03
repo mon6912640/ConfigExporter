@@ -18,12 +18,18 @@ class ExcelIndexEnum(Enum):
     """
     excel关键index枚举
     """
+    # 字段注释所在的排
     comment_r = 0
+    # 前端key所在的排
     client_key_r = 1
+    # 类型所在的排
     type_r = 2
+    # 后端key所在的排
     server_key_r = 3
+    # 数据起始排
     data_start_r = 4
 
+    # 数据起始行
     data_start_c = 1
 
 
@@ -61,6 +67,8 @@ class TempCfgVo:
     json_copy_path = ''
     # 每次生成输出前是否清除旧文件
     clean = False
+    # 生成的结构体是否在同一个文件内
+    struct_in_one = False
 
     __str_tmp: str = None
 
@@ -90,6 +98,8 @@ class TempCfgVo:
             self.clean = p_cfg_data['clean']
         if 'compressSuffix' in p_cfg_data:
             self.compress_suffix = p_cfg_data['compressSuffix']
+        if 'structInOne' in p_cfg_data:
+            self.struct_in_one = p_cfg_data['structInOne']
 
     @property
     def str_tmp(self):
@@ -119,7 +129,10 @@ class ExcelVo:
     cfg: TempCfgVo = None
     # 表格数据引用
     sheet: xlrd.sheet.Sheet = None
+
     __key_vo_list: List[KeyVo] = None
+    __has_id_in_client = None
+    __has_id_in_server = None
 
     def __init__(self, cfg, sheet, source_path, filename):
         self.cfg = cfg
@@ -143,7 +156,7 @@ class ExcelVo:
         :return:
         """
         if self.sheet is not None:
-            return self.export_name + 'Config' + '.' + self.cfg.suffix
+            return self.export_name + 'Cfg' + '.' + self.cfg.suffix
 
     @property
     def export_class_name(self):
@@ -152,7 +165,7 @@ class ExcelVo:
         :return:
         """
         if self.sheet is not None:
-            return self.export_name + 'Config'
+            return self.export_name + 'Cfg'
 
     @property
     def key_vo_list(self):
@@ -199,3 +212,33 @@ class ExcelVo:
                     t_vo.export_server = True
                 t_vo.comment = cell_comment.value
         return self.__key_vo_list
+
+    def has_id_in_client(self) -> bool:
+        """
+        是否有id主键（前端）
+        :return:
+        """
+        if self.__has_id_in_client is None:
+            key_list = self.key_vo_list
+            has_id = False
+            for v in key_list:
+                if v.key_client == 'id':
+                    has_id = True
+                    break
+            self.__has_id_in_client = has_id
+        return self.__has_id_in_client
+
+    def has_id_in_server(self) -> bool:
+        """
+        是否有id主键（后端）
+        :return:
+        """
+        if self.__has_id_in_server is None:
+            key_list = self.key_vo_list
+            has_id = False
+            for v in key_list:
+                if v.key_server == 'id':
+                    has_id = True
+                    break
+            self.__has_id_in_server = has_id
+        return self.__has_id_in_server

@@ -1,2 +1,2 @@
 @echo off
-python main.py --template as --exportJson 1 --exportStruct 1
+python ConfigExporter.py --template ts --exportJson 1 --exportStruct 1 --verbose 0

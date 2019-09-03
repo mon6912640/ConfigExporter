@@ -18,7 +18,9 @@
     //填上路径则会额外输出json表的可读副本，方便检查输出数据的错误，留空则不输出副本
     "jsonCopyPath": "./copy",
     //每次生成输出前是否清除旧文件
-    "clean": true
+    "clean": true,
+    //类结构是否生成在同一个文件
+    "structInOne": false
   },
   //====================
 
@@ -40,6 +42,8 @@
     "jsonCopyPath": "./copy",
     //每次生成输出前是否清除旧文件
     "clean": true,
+    //类结构是否生成在同一个文件
+    "structInOne": true,
     //导出类文件的后缀名
     "suffix": "ts",
     //模板文件名称

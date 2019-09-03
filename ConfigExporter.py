@@ -5,35 +5,41 @@ import os.path
 import re
 import time
 import zlib
+from pathlib import Path
 
 import json_minify
 
 from monkey_xls import *
 
+"""
+配置导出工具，支持导出类结构和外载json，其中类结构还支持自定义模板，通过自定义模板结构体，可以兼容多种语言
+"""
+
 # 模板配置文件 0template.json
 template_config = None
 cfg_vo_map = {}
 file_count = 0
+verbose = 0
 
-# 生成配置vo
-OP_VO = 0b1
+# 生成配置结构体vo
+OP_STRUCT = 0b1
 # 生成json数据
-OP_DATA = 0b10
+OP_PACK = 0b10
 
 
 # 通过key获取模板配置数据
 def get_cfg_by_key(p_key) -> TempCfgVo:
     global cfg_vo_map
-
+    path0 = Path('template\\0template.json')
     if p_key not in cfg_vo_map:
         global template_config
 
         if not template_config:
             # 加载模板配置
-            with open('template\\0template.json', 'r', encoding='utf-8') as f:
+            with open(str(path0), 'r', encoding='utf-8') as f:
                 # json_minify库支持json文件里面添加注释
                 template_config = json.loads(json_minify.json_minify(f.read()))
-                print('====加载模板文件配置成功')
+                print('====加载模板文件配置成功\n{0}'.format(path0.absolute()))
 
         if p_key not in template_config:
             print('0template.json 中不存在 ' + p_key + ' 配置：')
@@ -45,11 +51,16 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
         else:
             cfg_vo = TempCfgVo(template_config[p_key])
         cfg_vo_map[p_key] = cfg_vo
+        path_tmp: Path = path0.parent / cfg_vo.template
+        if path_tmp.exists():
+            print('====成功加载类结构模板\n{0}\n'.format(path_tmp.absolute()))
+        else:
+            print('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
 
     return cfg_vo_map[p_key]
 
 
-def export_config_vo(excel_vo: ExcelVo):
+def export_config_struct(excel_vo: ExcelVo, p_str_map):
     vo_list = excel_vo.key_vo_list
     # 跳过无key列表的数据列表
     if len(vo_list) == 0:
@@ -63,7 +74,7 @@ def export_config_vo(excel_vo: ExcelVo):
         result = ''
         loop_str = str(m.group(1)).lstrip('\n')
         for v in vo_list:
-            if not v.key_client:
+            if not v.key_client:  # 跳过没有导出前端的字段
                 continue
 
             def rpl_property(m1):
@@ -82,13 +93,18 @@ def export_config_vo(excel_vo: ExcelVo):
 
     output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
 
-    path = os.path.join(excel_vo.cfg.output_path, excel_vo.export_filename)
-    root = os.path.dirname(path)
-    if not os.path.exists(root):
-        os.makedirs(root)  # 递归创建文件夹
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(output_str)
-        # print('成功导出', excel_vo.export_filename)
+    if not excel_vo.cfg.struct_in_one:
+        path = os.path.join(excel_vo.cfg.output_path, excel_vo.export_filename)
+        root = os.path.dirname(path)
+        if not os.path.exists(root):
+            os.makedirs(root)  # 递归创建文件夹
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(output_str)
+            if verbose:
+                print('...成功导出', excel_vo.export_filename)
+    if p_str_map is not None:
+        p_str_map.append(output_str)
+    return output_str
 
 
 # 替换关键字
@@ -125,7 +141,6 @@ def transform_tye(p_type, p_map):
 def export_json_data(excel_vo: ExcelVo, json_map):
     sheet = excel_vo.sheet
     key_vo_list = excel_vo.key_vo_list
-    # obj_list = []
     obj_list = {}
     for i in range(ExcelIndexEnum.data_start_r.value, sheet.nrows):
         rows = sheet.row(i)
@@ -191,19 +206,21 @@ def export_json_data(excel_vo: ExcelVo, json_map):
 
 
 # 导出vo文件
-def main_run(p_key, op):
+def main_run(p_key, op, p_verbose=0):
     cfg = get_cfg_by_key(p_key)
+    global verbose
+    verbose = p_verbose
 
     # 清除旧文件
     if cfg.clean:
-        if ((op & OP_VO) == OP_VO) and cfg.output_path:
+        if ((op & OP_STRUCT) == OP_STRUCT) and cfg.output_path:
             for root, dirs, files in os.walk(cfg.output_path):
                 for fname in files:
                     file_url = os.path.join(root, fname)
                     name, ext = os.path.splitext(file_url)
                     if ext == '.' + cfg.suffix:  # 删除指定格式的旧文件
                         os.remove(file_url)
-        if ((op & OP_DATA) == OP_DATA) and cfg.json_copy_path:
+        if ((op & OP_PACK) == OP_PACK) and cfg.json_copy_path:
             for root, dirs, files in os.walk(cfg.json_copy_path):
                 for fname in files:
                     file_url = os.path.join(root, fname)
@@ -219,10 +236,13 @@ def main_run(p_key, op):
 
     global file_count
     json_map = {}
+    str_map = []
+    export_name_map = set()
     # 遍历文件夹内所有的xlsx文件
     for fpath, dirnames, fnames in os.walk(cfg.source_path):
         for fname in fnames:
             file_url = os.path.join(fpath, fname)
+            path_file = Path(file_url)
             name, ext = os.path.splitext(file_url)
             if fname.find('~$') > -1:  # 跳过临时打开xlsx文件
                 continue
@@ -232,15 +252,24 @@ def main_run(p_key, op):
                 if sheet.cell_type(0, 0) != 1:
                     print('第一行第一格没有填写表名，无效的xlsx：' + fname)
                     continue
+                if p_verbose:
+                    print(path_file.absolute())
                 excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
+                if excel_vo.export_name in export_name_map:
+                    print('...[warning]导出表名重复，跳过', path_file)
+                    continue
+                if not excel_vo.has_id_in_client():  # 跳过没有id字段的
+                    print('...[warning]缺少id字段，跳过', path_file)
+                    continue
+                export_name_map.add(excel_vo.export_name)
                 file_count += 1
-                if (op & OP_VO) == OP_VO:  # 导出vo类
-                    export_config_vo(excel_vo)
-                if (op & OP_DATA) == OP_DATA:  # 导出json数据
+                if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
+                    export_config_struct(excel_vo, str_map)
+                if (op & OP_PACK) == OP_PACK:  # 导出json数据
                     export_json_data(excel_vo, json_map)
 
     # 所有配置打包到一个文件中
-    if (op & OP_DATA) == OP_DATA and cfg.json_pack_in_one:
+    if (op & OP_PACK) == OP_PACK and cfg.json_pack_in_one:
         json_pack = json.dumps(json_map, ensure_ascii=False, separators=(',', ':'))
         path = os.path.join(cfg.json_path, '0config' + '.json')
         root = os.path.dirname(path)
@@ -261,6 +290,14 @@ def main_run(p_key, op):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(json_pack)
+    if (op & OP_STRUCT) == OP_STRUCT and cfg.struct_in_one:
+        if len(str_map) > 0:
+            struct_str = ''
+            for v in str_map:
+                struct_str += v + '\n'
+            path_struct: Path = Path(cfg.output_path) / ('ConfigStruct.' + cfg.suffix)
+            path_struct.parent.mkdir(parents=True, exist_ok=True)
+            path_struct.write_text(struct_str, encoding='utf-8')
 
 
 def file_compress(spath, tpath, level=9, delete_source=False):
@@ -305,31 +342,31 @@ def file_decompress(spath, tpath):
     file_target.close()
 
 
-parser = argparse.ArgumentParser(description='帮助信息')
-parser.add_argument('--template', type=str, default='as', help='0template.json中配置的模板键名')
-parser.add_argument('--exportJson', type=int, default=0, help='是否输出json，1输出，0不输出，默认为1')
-parser.add_argument('--exportStruct', type=int, default=1, help='是否输出语言结构体，1输出，0不输出，默认为1')
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='帮助信息')
+    parser.add_argument('--template', type=str, default='ts', help='0template.json中配置的模板键名')
+    parser.add_argument('--exportJson', type=int, default=1, help='是否输出json，1输出，0不输出，默认为1')
+    parser.add_argument('--exportStruct', type=int, default=1, help='是否输出语言结构体，1输出，0不输出，默认为1')
+    parser.add_argument('--verbose', type=int, default=0, help='输出详细信息，0不输出，1输出，默认为0')
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-print(args.template)
-print(args.exportJson)
-print(args.exportStruct)
+    print('运行参数：{0} {1} {2}'.format(args.template, args.exportJson, args.exportStruct, args.verbose))
 
-op_value = 0
-if args.exportJson:
-    op_value |= OP_DATA
-if args.exportStruct:
-    op_value |= OP_VO
+    op_value = 0
+    if args.exportJson:
+        op_value |= OP_PACK
+    if args.exportStruct:
+        op_value |= OP_STRUCT
 
-if not op_value:
-    print('无操作，退出')
-    exit()
+    if not op_value:
+        print('无操作，退出')
+        exit()
 
-start = time.time()
-main_run(args.template, op_value)
-# file_compress('./data/0config.json', './data/0config.zlib')
-# file_decompress('./data/0config.zlib', './data/fuck.json')
-end = time.time()
-print('输出 %s 个文件' % file_count)
-print('总用时', end - start)
+    start = time.time()
+    main_run(args.template, op_value, p_verbose=args.verbose)
+    # file_compress('./data/0config.json', './data/0config.zlib')
+    # file_decompress('./data/0config.zlib', './data/fuck.json')
+    end = time.time()
+    print('输出 {0} 个文件'.format(file_count))
+    print('总用时 {0} s'.format(round(end - start, 2)))
