@@ -10,6 +10,7 @@ from pathlib import Path
 import json_minify
 
 from monkey_xls import *
+import CmdColorUtil
 
 """
 配置导出工具，支持导出类结构和外载json，其中类结构还支持自定义模板，通过自定义模板结构体，可以兼容多种语言
@@ -55,7 +56,8 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
         if path_tmp.exists():
             print('====成功加载类结构模板\n{0}\n'.format(path_tmp.absolute()))
         else:
-            print('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
+            CmdColorUtil.printRed('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
+
 
     return cfg_vo_map[p_key]
 
@@ -256,10 +258,10 @@ def main_run(p_key, op, p_verbose=0):
                     print(path_file.absolute())
                 excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
                 if excel_vo.export_name in export_name_map:
-                    print('...[warning]导出表名重复，跳过', path_file)
+                    CmdColorUtil.printRed('...[warning]导出表名重复，跳过', path_file)
                     continue
                 if not excel_vo.has_id_in_client():  # 跳过没有id字段的
-                    print('...[warning]缺少id字段，跳过', path_file)
+                    CmdColorUtil.printRed('...[warning]缺少id字段，跳过 {0}'.format(path_file))
                     continue
                 export_name_map.add(excel_vo.export_name)
                 file_count += 1
