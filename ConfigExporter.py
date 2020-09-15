@@ -6,6 +6,7 @@ import re
 import time
 import zlib
 from pathlib import Path
+import sys
 
 import json_minify
 
@@ -27,11 +28,13 @@ OP_STRUCT = 0b1
 # 生成json数据
 OP_PACK = 0b10
 
+app_dir = None
+
 
 # 通过key获取模板配置数据
 def get_cfg_by_key(p_key) -> TempCfgVo:
     global cfg_vo_map
-    path0 = Path('template\\0template.json')
+    path0 = app_dir / 'template/0template.json'
     if p_key not in cfg_vo_map:
         global template_config
 
@@ -51,14 +54,13 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
             cfg_vo.set_data(template_config[p_key])
         else:
             cfg_vo = TempCfgVo(template_config[p_key])
+        cfg_vo.app_dir = app_dir  # 设置工具的目录
         cfg_vo_map[p_key] = cfg_vo
         path_tmp: Path = path0.parent / cfg_vo.template
         if path_tmp.exists():
             print('====成功加载类结构模板\n{0}\n'.format(path_tmp.absolute()))
         else:
             CmdColorUtil.printRed('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
-
-
     return cfg_vo_map[p_key]
 
 
@@ -213,6 +215,16 @@ def main_run(p_key, op, p_verbose=0):
     global verbose
     verbose = p_verbose
 
+    path_source = Path(cfg.source_path)
+    if not path_source.exists():
+        CmdColorUtil.printRed('...[warning]路径不存在 {0}'.format(path_source))
+        return
+
+    path_output = Path(cfg.output_path)
+    if not path_output.exists():
+        CmdColorUtil.printRed('...[warning]路径不存在 {0}'.format(path_output))
+        return
+
     # 清除旧文件
     if cfg.clean:
         if ((op & OP_STRUCT) == OP_STRUCT) and cfg.output_path:
@@ -241,34 +253,31 @@ def main_run(p_key, op, p_verbose=0):
     str_map = []
     export_name_map = set()
     # 遍历文件夹内所有的xlsx文件
-    for fpath, dirnames, fnames in os.walk(cfg.source_path):
-        for fname in fnames:
-            file_url = os.path.join(fpath, fname)
-            path_file = Path(file_url)
-            name, ext = os.path.splitext(file_url)
-            if fname.find('~$') > -1:  # 跳过临时打开xlsx文件
-                continue
-            if ext == '.xlsx':
-                wb = xlrd.open_workbook(filename=file_url)
-                sheet = wb.sheet_by_index(0)
-                if sheet.cell_type(0, 0) != 1:
-                    print('第一行第一格没有填写表名，无效的xlsx：' + fname)
-                    continue
-                if p_verbose:
-                    print(path_file.absolute())
-                excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=fname)
-                if excel_vo.export_name in export_name_map:
-                    CmdColorUtil.printRed('...[warning]导出表名重复，跳过', path_file)
-                    continue
-                if not excel_vo.has_id_in_client():  # 跳过没有id字段的
-                    CmdColorUtil.printRed('...[warning]缺少id字段，跳过 {0}'.format(path_file))
-                    continue
-                export_name_map.add(excel_vo.export_name)
-                file_count += 1
-                if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
-                    export_config_struct(excel_vo, str_map)
-                if (op & OP_PACK) == OP_PACK:  # 导出json数据
-                    export_json_data(excel_vo, json_map)
+    list_file = sorted(path_source.rglob('*.xlsx'))
+    for v in list_file:
+        file_url = v.absolute()
+        if v.name.find('~$') > -1:  # 跳过临时打开xlsx文件
+            continue
+        wb = xlrd.open_workbook(filename=file_url)
+        sheet = wb.sheet_by_index(0)
+        if sheet.cell_type(0, 0) != 1:
+            print('第一行第一格没有填写表名，无效的xlsx：' + v.name)
+            continue
+        if p_verbose:
+            print(v.absolute())
+        excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=v.name)
+        if excel_vo.export_name in export_name_map:
+            CmdColorUtil.printRed('...[warning]导出表名重复，跳过 {0}'.format(v))
+            continue
+        if not excel_vo.has_id_in_client():  # 跳过没有id字段的
+            CmdColorUtil.printRed('...[warning]缺少id字段，跳过 {0}'.format(v))
+            continue
+        export_name_map.add(excel_vo.export_name)
+        file_count += 1
+        if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
+            export_config_struct(excel_vo, str_map)
+        if (op & OP_PACK) == OP_PACK:  # 导出json数据
+            export_json_data(excel_vo, json_map)
 
     # 所有配置打包到一个文件中
     if (op & OP_PACK) == OP_PACK and cfg.json_pack_in_one:
@@ -366,6 +375,7 @@ if __name__ == '__main__':
         exit()
 
     start = time.time()
+    app_dir = Path(sys.argv[0]).parent
     main_run(args.template, op_value, p_verbose=args.verbose)
     # file_compress('./data/0config.json', './data/0config.zlib')
     # file_decompress('./data/0config.zlib', './data/fuck.json')

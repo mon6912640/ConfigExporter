@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 from typing import List
 
 import xlrd
@@ -70,6 +71,9 @@ class TempCfgVo:
     # 生成的结构体是否在同一个文件内
     struct_in_one = False
 
+    # 工具的路径
+    app_dir: Path = None
+
     __str_tmp: str = None
 
     def __init__(self, p_cfg_data):
@@ -108,15 +112,7 @@ class TempCfgVo:
         :return:
         """
         if self.__str_tmp is None:
-            '''
-            在Python3，可以通过open函数的newline参数来控制Universal new line mode
-            读取时候，不指定newline，则默认开启Universal new line mode，所有\n, \r, or \r\n被默认转换为\n；
-            写入时，不指定newline，则换行符为各系统默认的换行符（\n, \r, or \r\n, ），指定为newline='\n'，则都替换为\n（相当于Universal new line mode）；
-            不论读或者写时，newline=''都表示不转换。
-            参考链接：https://www.zhihu.com/question/19751023
-            '''
-            with open('template\\' + self.template, 'r', encoding='utf-8') as f:
-                self.__str_tmp = f.read()
+            self.__str_tmp = (self.app_dir / 'template' / self.template).read_text(encoding='utf-8')
         return self.__str_tmp
 
 
