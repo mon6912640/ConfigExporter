@@ -70,6 +70,10 @@ class TempCfgVo:
     clean = False
     # 生成的结构体是否在同一个文件内
     struct_in_one = False
+    # 枚举类模板
+    enum_tmp = ''
+    # 导出枚举类名称
+    enum_class_name = ''
 
     # 工具的路径
     app_dir: Path = None
@@ -104,6 +108,10 @@ class TempCfgVo:
             self.compress_suffix = p_cfg_data['compressSuffix']
         if 'structInOne' in p_cfg_data:
             self.struct_in_one = p_cfg_data['structInOne']
+        if 'enumTmp' in p_cfg_data:
+            self.enum_tmp = p_cfg_data['enumTmp']
+        if 'enumClassName' in p_cfg_data:
+            self.enum_class_name = p_cfg_data['enumClassName']
 
     @property
     def str_tmp(self):

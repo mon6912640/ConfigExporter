@@ -112,13 +112,20 @@ def export_config_struct(excel_vo: ExcelVo, p_str_map):
 
 
 # 替换关键字
-def replace_key(p_key: str, p_excel_vo: ExcelVo, p_key_vo: KeyVo = None):
+def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, p_export_name: str = None,
+                p_enum_class_name: str = None):
     if p_key == 'source_filename':
         return p_excel_vo.source_filename
+
     elif p_key == 'export_name':
-        return p_excel_vo.export_name
+        if p_excel_vo:
+            return p_excel_vo.export_name
+        else:
+            return p_export_name
+
     elif p_key == 'export_class_name':
         return p_excel_vo.export_class_name
+
     elif p_key_vo is not None:
         if p_key == 'property_name':
             return p_key_vo.key_client
@@ -129,6 +136,10 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo, p_key_vo: KeyVo = None):
             return p_key_vo.comment
         elif p_key == 'index':
             return str(p_key_vo.index)
+
+    elif p_key == 'enum_class_name':
+        return p_enum_class_name
+
     else:
         return 'undefinded'
 
@@ -261,7 +272,7 @@ def main_run(p_key, op, p_verbose=0):
         wb = xlrd.open_workbook(filename=file_url)
         sheet = wb.sheet_by_index(0)
         if sheet.cell_type(0, 0) != 1:
-            print('第一行第一格没有填写表名，无效的xlsx：' + v.name)
+            CmdColorUtil.printRed('...[warning]第一行第一格没有填写表名，无效的xlsx：' + v.name)
             continue
         if p_verbose:
             print(v.absolute())
@@ -278,6 +289,39 @@ def main_run(p_key, op, p_verbose=0):
             export_config_struct(excel_vo, str_map)
         if (op & OP_PACK) == OP_PACK:  # 导出json数据
             export_json_data(excel_vo, json_map)
+
+    # 导出枚举类
+    if ((op & OP_STRUCT) == OP_STRUCT) and cfg.enum_tmp and cfg.enum_class_name:
+        while True:
+            enum_tmp = app_dir / 'template' / cfg.enum_tmp
+            if not enum_tmp.exists():
+                CmdColorUtil.printRed('...[warning]不存在模板文件 {0}'.format(enum_tmp))
+                break
+            str_tmp = enum_tmp.read_text(encoding='utf-8')
+
+            def rpl_loop(m):
+                result = ''
+                loop_str = str(m.group(1)).lstrip('\n')
+                for ename in export_name_map:
+                    def rpl_property(m1):
+                        key_str = m1.group(1)
+                        return replace_key(key_str, p_export_name=ename)
+
+                    result += re.sub('<#(.*?)#>', rpl_property, loop_str)
+                # 这里需要把前后的换行干掉
+                return result.rstrip('\n')
+
+            output_str = re.sub('^<<<<\\s*$(.+?)^>>>>\\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+
+            def rpl_export(m):
+                key_str = m.group(1)
+                return replace_key(key_str, p_enum_class_name=cfg.enum_class_name)
+
+            output_str = re.sub('<#(.*?)#>', rpl_export, output_str)
+            path_enum = Path(cfg.output_path) / (cfg.enum_class_name + '.' + cfg.suffix)
+            path_enum.parent.mkdir(parents=True, exist_ok=True)
+            path_enum.write_text(output_str, encoding='utf-8')
+            break
 
     # 所有配置打包到一个文件中
     if (op & OP_PACK) == OP_PACK and cfg.json_pack_in_one:

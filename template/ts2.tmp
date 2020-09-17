@@ -9,7 +9,7 @@ class <#export_class_name#>
 
     public initData(pData:Object)
     {
-        for(let k in pData)
+		for(let k in pData)
         {
             try {
                 this[k] = pData[k];
@@ -18,12 +18,10 @@ class <#export_class_name#>
             }
         }
     }
-
 <<<<
 	/**
 	 * <#comment#>
 	 */
 	public <#property_name#>:<#type#>;
-
 >>>>
 }
