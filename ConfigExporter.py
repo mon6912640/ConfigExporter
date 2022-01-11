@@ -7,6 +7,7 @@ import time
 import zlib
 from pathlib import Path
 import sys
+import zipfile
 
 import json_minify
 
@@ -205,9 +206,9 @@ def export_json_data(excel_vo: ExcelVo, json_map):
         with open(path, 'w', encoding='utf-8') as f:
             f.write(json_obj_min)
 
-        if excel_vo.cfg.json_compress == 'zlib':
+        if excel_vo.cfg.json_compress == 'zlib' or excel_vo.cfg.json_compress == 'zip':
             zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.' + excel_vo.cfg.compress_suffix)
-            file_compress(path, zlib_path, delete_source=True)
+            file_compress(path, zlib_path, delete_source=True, ptype=excel_vo.cfg.json_compress)
 
     if excel_vo.cfg.json_copy_path:
         # 格式化过的json（便于人员察看检查）
@@ -262,7 +263,7 @@ def main_run(p_key, op, p_verbose=0):
     global file_count
     json_map = {}
     str_map = []
-    export_name_map = set()
+    export_name_map = {}
     # 遍历文件夹内所有的xlsx文件
     list_file = sorted(path_source.rglob('*.xlsx'))
     for v in list_file:
@@ -283,7 +284,7 @@ def main_run(p_key, op, p_verbose=0):
         if not excel_vo.has_id_in_client():  # 跳过没有id字段的
             CmdColorUtil.printRed('...[warning]缺少id字段，跳过 {0}'.format(v))
             continue
-        export_name_map.add(excel_vo.export_name)
+        export_name_map[excel_vo.export_name] = excel_vo
         file_count += 1
         if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
             export_config_struct(excel_vo, str_map)
@@ -302,10 +303,10 @@ def main_run(p_key, op, p_verbose=0):
             def rpl_loop(m):
                 result = ''
                 loop_str = str(m.group(1)).lstrip('\n')
-                for ename in export_name_map:
+                for k, v in export_name_map.items():
                     def rpl_property(m1):
                         key_str = m1.group(1)
-                        return replace_key(key_str, p_export_name=ename)
+                        return replace_key(key_str, p_excel_vo=v, p_export_name=k)
 
                     result += re.sub('<#(.*?)#>', rpl_property, loop_str)
                 # 这里需要把前后的换行干掉
@@ -333,9 +334,9 @@ def main_run(p_key, op, p_verbose=0):
         with open(path, 'w', encoding='utf-8') as f:
             f.write(json_pack)
 
-        if cfg.json_compress == 'zlib':  # zlib压缩
+        if cfg.json_compress == 'zlib' or cfg.json_compress == 'zip':  # zlib压缩 or zip打包
             zlib_path = os.path.join(cfg.json_path, '0config' + '.' + cfg.compress_suffix)
-            file_compress(path, zlib_path, delete_source=True)
+            file_compress(path, zlib_path, delete_source=True, ptype=cfg.json_compress)
 
         if cfg.json_copy_path:
             json_pack = json.dumps(json_map, ensure_ascii=False, indent=4)
@@ -355,7 +356,7 @@ def main_run(p_key, op, p_verbose=0):
             path_struct.write_text(struct_str, encoding='utf-8')
 
 
-def file_compress(spath, tpath, level=9, delete_source=False):
+def file_compress(spath, tpath, level=9, delete_source=False, ptype='zlib'):
     """
     zlib.compressobj 用来压缩数据流，用于文件传输
     :param spath:源文件
@@ -364,16 +365,30 @@ def file_compress(spath, tpath, level=9, delete_source=False):
     :param delete_source:是否删除源文件，默认不删除
     :return:
     """
-    file_source = open(spath, 'rb')
-    file_target = open(tpath, 'wb')
-    compress_obj = zlib.compressobj(level, wbits=-15, method=zlib.DEFLATED)  # 压缩对象
-    data = file_source.read(1024)  # 1024为读取的size参数
-    while data:
-        file_target.write(compress_obj.compress(data))  # 写入压缩数据
-        data = file_source.read(1024)  # 继续读取文件中的下一个size的内容
-    file_target.write(compress_obj.flush())  # compressobj.flush()包含剩余压缩输出的字节对象，将剩余的字节内容写入到目标文件中
-    file_source.close()
-    file_target.close()
+    if ptype == 'zlib':
+        file_source = open(spath, 'rb')
+        file_target = open(tpath, 'wb')
+        compress_obj = zlib.compressobj(level, wbits=-15, method=zlib.DEFLATED)  # 压缩对象
+        data = file_source.read(1024)  # 1024为读取的size参数
+        while data:
+            file_target.write(compress_obj.compress(data))  # 写入压缩数据
+            data = file_source.read(1024)  # 继续读取文件中的下一个size的内容
+        file_target.write(compress_obj.flush())  # compressobj.flush()包含剩余压缩输出的字节对象，将剩余的字节内容写入到目标文件中
+        file_source.close()
+        file_target.close()
+    elif ptype == 'zip':
+        try:
+            with zipfile.ZipFile(tpath, mode="w", compression=zipfile.ZIP_DEFLATED) as f:
+                path_source = Path(spath)
+                f.write(spath, arcname=path_source.name)  # 写入压缩文件，会把压缩文件中的原有覆盖
+        except Exception as e:
+            print("异常对象的类型是:%s" % type(e))
+            print("异常对象的内容是:%s" % e)
+        finally:
+            f.close()
+        pass
+
+    # 删除压缩源
     if delete_source:
         os.remove(spath)
 

@@ -4,6 +4,7 @@
  */
 class <#enum_class_name#> {
 <<<<
+    /** <#source_filename#> */
     static <#export_name#> = "<#export_name#>";
 >>>>
 }
