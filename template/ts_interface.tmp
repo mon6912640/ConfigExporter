@@ -1,0 +1,11 @@
+/**
+ * <#source_filename#> | sheet:<#sheet_name#>
+ * 表名 <#export_name#>
+ * 此文件由工具生成，请勿自行添加代码
+ */
+interface I<#export_name#> {
+<<<<
+	/** <#comment#> */
+	<#property_name#>:<#type#>;
+>>>>
+}

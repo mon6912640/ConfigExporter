@@ -101,20 +101,29 @@
   },
   "ximigame1": {
     "sourcePath": "D://work_ximi//plan//配置表_trunk",
-    "outputPath": "./output",
+    "outputPath": "D:\\work_ximi\\client\\trunk\\clientGame\\src\\configcls",
+    //数据json输出路径
+    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
     "suffix": "ts",
-    "template": "ts.tmp",
+    "template": "ts_interface.tmp",
     //数据压缩方式
-    "jsonCompress": "zip",
+    "jsonCompress": "",
     //类结构是否生成在同一个文件
     "structInOne": true,
     //枚举类模板
     "enumTmp": "ts.enum",
     //导出枚举类名称
-    "enumClassName": "EnumCfg",
+    "enumClassName": "CfgAll",
     "typeMap": {
+      "default": "number",
       "Integer": "number",
-      "String": "string"
+      "INTEGER": "number",
+      "String": "string",
+      "STRING": "string",
+      "drop": "string",
+      "DROP": "string",
+      "items": "string",
+      "ITEMS": "string"
     }
   },
   "as": {

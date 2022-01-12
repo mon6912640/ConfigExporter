@@ -3,16 +3,16 @@ import json
 import os
 import os.path
 import re
-import time
-import zlib
-from pathlib import Path
 import sys
+import time
 import zipfile
+import zlib
 
 import json_minify
 
-from monkey_xls import *
 import CmdColorUtil
+import common_util
+from monkey_xls import *
 
 """
 配置导出工具，支持导出类结构和外载json，其中类结构还支持自定义模板，通过自定义模板结构体，可以兼容多种语言
@@ -30,6 +30,14 @@ OP_STRUCT = 0b1
 OP_PACK = 0b10
 
 app_dir = None
+
+
+def error(content):
+    CmdColorUtil.printRed(content)
+
+
+def warning(content):
+    CmdColorUtil.printYellow(content)
 
 
 # 通过key获取模板配置数据
@@ -61,7 +69,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
         if path_tmp.exists():
             print('====成功加载类结构模板\n{0}\n'.format(path_tmp.absolute()))
         else:
-            CmdColorUtil.printRed('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
+            error('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
     return cfg_vo_map[p_key]
 
 
@@ -118,6 +126,9 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, 
     if p_key == 'source_filename':
         return p_excel_vo.source_filename
 
+    elif p_key == 'sheet_name':
+        return p_excel_vo.sheet.name
+
     elif p_key == 'export_name':
         if p_excel_vo:
             return p_excel_vo.export_name
@@ -150,7 +161,42 @@ def transform_tye(p_type, p_map):
     if p_type in p_map:
         return p_map[p_type]
     else:
+        if p_type == '' and p_map['default']:
+            # 配置中typeMap字段有添default的则使用默认的类型
+            return p_map['default']
         return None
+
+
+def is_int(p_type, p_map):
+    """
+    判断是否整型
+    :param p_type:
+    :param p_map:
+    :return:
+    """
+    ttype = transform_tye(p_type, p_map)
+    if ttype == 'number':
+        # 整型的类型可以在这里添加
+        return True
+    else:
+        return False
+
+
+def parse_value(kv: KeyVo, cell: xlrd.sheet.Cell, p_map):
+    if is_int(kv.type, p_map):  # 整型
+        if cell.value == '':  # 空值则强转为0
+            value = 0
+        else:
+            value = int(cell.value)
+    else:
+        if cell.ctype == 2:
+            if cell.value % 1 == 0.0:
+                value = str(int(cell.value))
+            else:
+                value = str(cell.value)
+        else:
+            value = str(cell.value)
+    return value
 
 
 # 导出配置数据文件
@@ -171,23 +217,18 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                 ok_flag = False
                 break
 
-            if v.type == KeyTypeEnum.TYPE_INT.value:  # 整型
-                if cell.ctype == 2:  # number
-                    if cell.value % 1 == 0.0:
-                        value = int(cell.value)
-                    else:
-                        value = cell.value
-                else:
-                    value = 0
-            else:
-                if cell.ctype == 2:
-                    if cell.value % 1 == 0.0:
-                        value = str(int(cell.value))
-                    else:
-                        value = str(cell.value)
-                else:
-                    value = str(cell.value)
-
+            try:
+                value = parse_value(v, cell, excel_vo.cfg.type_map)
+            except BaseException as err:
+                col_num = v.index + 1
+                col_num_str = common_util.covert_10_to_26(col_num)
+                export_name = excel_vo.export_name + '.json'
+                error(
+                    '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(excel_vo.source_filename, i + 1,
+                                                                                   col_num,
+                                                                                   col_num_str,
+                                                                                   export_name, excel_vo.sheet.name))
+                value = cell.value
             obj[v.key_client] = value
         if ok_flag:
             # obj_list.append(obj)
@@ -229,12 +270,12 @@ def main_run(p_key, op, p_verbose=0):
 
     path_source = Path(cfg.source_path)
     if not path_source.exists():
-        CmdColorUtil.printRed('...[warning]路径不存在 {0}'.format(path_source))
+        error('...[warning]路径不存在 {0}'.format(path_source))
         return
 
     path_output = Path(cfg.output_path)
     if not path_output.exists():
-        CmdColorUtil.printRed('...[warning]路径不存在 {0}'.format(path_output))
+        error('...[warning]路径不存在 {0}'.format(path_output))
         return
 
     # 清除旧文件
@@ -271,32 +312,34 @@ def main_run(p_key, op, p_verbose=0):
         if v.name.find('~$') > -1:  # 跳过临时打开xlsx文件
             continue
         wb = xlrd.open_workbook(filename=file_url)
-        sheet = wb.sheet_by_index(0)
-        if sheet.cell_type(0, 0) != 1:
-            CmdColorUtil.printRed('...[warning]第一行第一格没有填写表名，无效的xlsx：' + v.name)
-            continue
-        if p_verbose:
-            print(v.absolute())
-        excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=v.name)
-        if excel_vo.export_name in export_name_map:
-            CmdColorUtil.printRed('...[warning]导出表名重复，跳过 {0}'.format(v))
-            continue
-        if not excel_vo.has_id_in_client():  # 跳过没有id字段的
-            CmdColorUtil.printRed('...[warning]缺少id字段，跳过 {0}'.format(v))
-            continue
-        export_name_map[excel_vo.export_name] = excel_vo
-        file_count += 1
-        if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
-            export_config_struct(excel_vo, str_map)
-        if (op & OP_PACK) == OP_PACK:  # 导出json数据
-            export_json_data(excel_vo, json_map)
+        sheet_counts = len(wb.sheets())
+        for i in range(sheet_counts):  # 遍历多个sheet
+            sheet = wb.sheet_by_index(i)
+            if sheet.cell_type(0, 0) != 1:
+                # error('...[warning]第一行第一格没有填写表名，无效的xlsx：{0} sheet{1}'.format(v.name, str(i)))
+                break
+            if p_verbose:
+                print('{0} | sheet:{1}'.format(v.absolute(), sheet.name))
+            excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=v.name)
+            if excel_vo.export_name in export_name_map:
+                warning('...[warning]导出表名重复，跳过 {0} | sheet:{1}'.format(v, sheet.name))
+                break
+            if not excel_vo.has_id_in_client():  # 跳过没有id字段的
+                warning('...[warning]缺少id字段，跳过 {0} | sheet:{1}'.format(v, sheet.name))
+                break
+            export_name_map[excel_vo.export_name] = excel_vo
+            file_count += 1
+            if (op & OP_STRUCT) == OP_STRUCT:  # 导出vo类
+                export_config_struct(excel_vo, str_map)
+            if (op & OP_PACK) == OP_PACK:  # 导出json数据
+                export_json_data(excel_vo, json_map)
 
     # 导出枚举类
     if ((op & OP_STRUCT) == OP_STRUCT) and cfg.enum_tmp and cfg.enum_class_name:
         while True:
             enum_tmp = app_dir / 'template' / cfg.enum_tmp
             if not enum_tmp.exists():
-                CmdColorUtil.printRed('...[warning]不存在模板文件 {0}'.format(enum_tmp))
+                error('...[warning]不存在模板文件 {0}'.format(enum_tmp))
                 break
             str_tmp = enum_tmp.read_text(encoding='utf-8')
 
