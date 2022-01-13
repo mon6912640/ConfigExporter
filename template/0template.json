@@ -90,7 +90,7 @@
     }
   },
   "ts2": {
-    "sourcePath": "D://work//plan//配置表",
+    "sourcePath": "D:/work/plan/配置表",
     "outputPath": "./output",
     "suffix": "ts",
     "template": "ts2.tmp",
@@ -100,7 +100,7 @@
     }
   },
   "ximigame1": {
-    "sourcePath": "D://work_ximi//plan//配置表_trunk",
+    "sourcePath": "D:/work_ximi/plan/配置表_trunk",
     "outputPath": "D:\\work_ximi\\client\\trunk\\clientGame\\src\\configcls",
     //数据json输出路径
     "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
@@ -127,7 +127,7 @@
     }
   },
   "ximigame1_fight": {
-    "sourcePath": "D://work_ximi//plan//配置表_trunk",
+    "sourcePath": "D:/work_ximi/plan/配置表_trunk",
     "outputPath": "D:\\work_ximi\\client\\trunk\\clientLibs\\fight\\src\\configcls",
     //数据json输出路径
     "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",

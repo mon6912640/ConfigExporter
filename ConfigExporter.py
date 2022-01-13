@@ -52,7 +52,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
             with open(str(path0), 'r', encoding='utf-8') as f:
                 # json_minify库支持json文件里面添加注释
                 template_config = json.loads(json_minify.json_minify(f.read()))
-                print('====加载模板文件配置成功\n{0}'.format(path0.absolute()))
+                print('====加载模板文件配置成功\n{0}'.format(path0.resolve().absolute()))
 
         if p_key not in template_config:
             print('0template.json 中不存在 ' + p_key + ' 配置：')
@@ -67,9 +67,9 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
         cfg_vo_map[p_key] = cfg_vo
         path_tmp: Path = path0.parent / cfg_vo.template
         if path_tmp.exists():
-            print('====成功加载类结构模板\n{0}\n'.format(path_tmp.absolute()))
+            print('====成功加载类结构模板\n{0}\n'.format(path_tmp.resolve().absolute()))
         else:
-            error('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.absolute()))
+            error('...[warning]类结构模板不存在\n{0}\n'.format(path_tmp.resolve().absolute()))
     return cfg_vo_map[p_key]
 
 
@@ -263,20 +263,29 @@ def export_json_data(excel_vo: ExcelVo, json_map):
 
 
 # 导出vo文件
-def main_run(p_key, op, p_verbose=0):
+def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
     cfg = get_cfg_by_key(p_key)
     global verbose
     verbose = p_verbose
 
+    if p_source:
+        cfg.source_path = p_source
     path_source = Path(cfg.source_path)
+    path_source = path_source.resolve()
     if not path_source.exists():
         error('...[warning]路径不存在 {0}'.format(path_source))
         return
 
+    if p_output:
+        cfg.output_path = p_output
     path_output = Path(cfg.output_path)
+    path_output = path_output.resolve()
     if not path_output.exists():
         error('...[warning]路径不存在 {0}'.format(path_output))
         return
+
+    if p_json:
+        cfg.json_path = p_json
 
     # 清除旧文件
     if cfg.clean:
@@ -287,19 +296,21 @@ def main_run(p_key, op, p_verbose=0):
                     name, ext = os.path.splitext(file_url)
                     if ext == '.' + cfg.suffix:  # 删除指定格式的旧文件
                         os.remove(file_url)
-        if ((op & OP_PACK) == OP_PACK) and cfg.json_copy_path:
-            for root, dirs, files in os.walk(cfg.json_copy_path):
-                for fname in files:
-                    file_url = os.path.join(root, fname)
-                    name, ext = os.path.splitext(file_url)
-                    if ext == '.json':
-                        os.remove(file_url)
-            for root, dirs, files in os.walk(cfg.json_path):
-                for fname in files:
-                    file_url = os.path.join(root, fname)
-                    name, ext = os.path.splitext(file_url)
-                    if ext == '.json' or ext == cfg.compress_suffix:
-                        os.remove(file_url)
+        if ((op & OP_PACK) == OP_PACK):
+            if cfg.json_copy_path:
+                for root, dirs, files in os.walk(cfg.json_copy_path):
+                    for fname in files:
+                        file_url = os.path.join(root, fname)
+                        name, ext = os.path.splitext(file_url)
+                        if ext == '.json':
+                            os.remove(file_url)
+            if cfg.json_path:
+                for root, dirs, files in os.walk(cfg.json_path):
+                    for fname in files:
+                        file_url = os.path.join(root, fname)
+                        name, ext = os.path.splitext(file_url)
+                        if ext == '.json' or ext == cfg.compress_suffix:
+                            os.remove(file_url)
 
     global file_count
     json_map = {}
@@ -458,13 +469,20 @@ def file_decompress(spath, tpath):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='帮助信息')
     parser.add_argument('--template', type=str, default='ts', help='0template.json中配置的模板键名')
-    parser.add_argument('--exportJson', type=int, default=1, help='是否输出json，1输出，0不输出，默认为1')
-    parser.add_argument('--exportStruct', type=int, default=1, help='是否输出语言结构体，1输出，0不输出，默认为1')
+    parser.add_argument('--exportJson', type=int, default=1, help='是否导出json，1输出，0不输出，默认为1')
+    parser.add_argument('--exportStruct', type=int, default=1, help='是否导出语言结构体，1输出，0不输出，默认为1')
     parser.add_argument('--verbose', type=int, default=0, help='输出详细信息，0不输出，1输出，默认为0')
+    parser.add_argument('--source', type=str, default='', help='配置路径')
+    parser.add_argument('--output', type=str, default='', help='类结构体路径')
+    parser.add_argument('--json', type=str, default='', help='配置导出json路径')
 
     args = parser.parse_args()
 
-    print('运行参数：{0} {1} {2}'.format(args.template, args.exportJson, args.exportStruct, args.verbose))
+    print('运行参数：\n--加载模板：{0} \n--是否导出json：{1} \n--是否导出结构体：{2}'.format(
+        args.template,
+        args.exportJson,
+        args.exportStruct,
+        args.verbose))
 
     op_value = 0
     if args.exportJson:
@@ -476,9 +494,14 @@ if __name__ == '__main__':
         print('无操作，退出')
         exit()
 
+    source = args.source
+    output = args.output
+    json_data = args.json
+
     start = time.time()
     app_dir = Path(sys.argv[0]).parent
-    main_run(args.template, op_value, p_verbose=args.verbose)
+    # print(app_dir.resolve())
+    main_run(args.template, op_value, p_verbose=args.verbose, p_source=source, p_output=output, p_json=json_data)
     # file_compress('./data/0config.json', './data/0config.zlib')
     # file_decompress('./data/0config.zlib', './data/fuck.json')
     end = time.time()
