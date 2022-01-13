@@ -126,6 +126,33 @@
       "ITEMS": "string"
     }
   },
+  "ximigame1_fight": {
+    "sourcePath": "D://work_ximi//plan//配置表_trunk",
+    "outputPath": "D:\\work_ximi\\client\\trunk\\clientLibs\\fight\\src\\configcls",
+    //数据json输出路径
+    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
+    "suffix": "ts",
+    "template": "ts_interface_fight.tmp",
+    //数据压缩方式
+    "jsonCompress": "",
+    //类结构是否生成在同一个文件
+    "structInOne": true,
+    //枚举类模板
+    "enumTmp": "ts_fight.enum",
+    //导出枚举类名称
+    "enumClassName": "CfgAll",
+    "typeMap": {
+      "default": "number",
+      "Integer": "number",
+      "INTEGER": "number",
+      "String": "string",
+      "STRING": "string",
+      "drop": "string",
+      "DROP": "string",
+      "items": "string",
+      "ITEMS": "string"
+    }
+  },
   "as": {
     //    "sourcePath": "D://work//plan//配置表",
     "outputPath": "./output",
