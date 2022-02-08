@@ -326,6 +326,8 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
         sheet_counts = len(wb.sheets())
         for i in range(sheet_counts):  # 遍历多个sheet
             sheet = wb.sheet_by_index(i)
+            if sheet.nrows <= 0:  # 避免sheet为空导致报错
+                break
             if sheet.cell_type(0, 0) != 1:
                 # error('...[warning]第一行第一格没有填写表名，无效的xlsx：{0} sheet{1}'.format(v.name, str(i)))
                 break

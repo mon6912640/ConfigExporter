@@ -11,13 +11,13 @@ module fight {
             t.cfgObj = pCfgObj;
         }
 
-    <<<<
+<<<<
         static <#export_name#> = "<#export_name#>";
         /** <#source_filename#> | sheet:<#sheet_name#> */
         static get <#export_name#>Map(): { [id: number]: I<#export_name#> } {
             return this.cfgObj["<#export_name#>"];
         }
 
-    >>>>
+>>>>
     }
 }
