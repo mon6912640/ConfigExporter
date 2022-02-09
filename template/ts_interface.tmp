@@ -5,7 +5,7 @@
  */
 interface I<#export_name#> {
 <<<<
-	/** <#comment#> */
-	<#property_name#>:<#type#>;
+	/** <#comment|separator:        #> */
+	<#property_name#>: <#type#>;
 >>>>
 }

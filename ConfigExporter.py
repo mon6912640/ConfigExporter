@@ -9,6 +9,7 @@ import zipfile
 import zlib
 
 import json_minify
+import openpyxl.worksheet.worksheet
 
 import CmdColorUtil
 import common_util
@@ -33,11 +34,11 @@ app_dir = None
 
 
 def error(content):
-    CmdColorUtil.printRed(content)
+    CmdColorUtil.printRed('[ERROR] ' + content)
 
 
 def warning(content):
-    CmdColorUtil.printYellow(content)
+    CmdColorUtil.printYellow('[WARNING] ' + content)
 
 
 # 通过key获取模板配置数据
@@ -55,7 +56,7 @@ def get_cfg_by_key(p_key) -> TempCfgVo:
                 print('====加载模板文件配置成功\n{0}'.format(path0.resolve().absolute()))
 
         if p_key not in template_config:
-            print('0template.json 中不存在 ' + p_key + ' 配置：')
+            error('0template.json 中不存在 ' + p_key + ' 配置：')
             exit()
 
         if 'base' in template_config:  # 有基础配置先设置基础配置
@@ -123,37 +124,68 @@ def export_config_struct(excel_vo: ExcelVo, p_str_map):
 # 替换关键字
 def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, p_export_name: str = None,
                 p_enum_class_name: str = None):
-    if p_key == 'source_filename':
+    key_name = p_key
+    if '|' in p_key:  # 这里关键词支持参数模式
+        key_list = p_key.split('|')
+        key_name = key_list[0]
+        param = key_list[1]
+        obj_par = parse_param(param)
+
+    if key_name == 'source_filename':
         return p_excel_vo.source_filename
 
-    elif p_key == 'sheet_name':
-        return p_excel_vo.sheet.name
+    elif key_name == 'sheet_name':
+        return p_excel_vo.sheet.title
 
-    elif p_key == 'export_name':
+    elif key_name == 'export_name':
         if p_excel_vo:
             return p_excel_vo.export_name
         else:
             return p_export_name
 
-    elif p_key == 'export_class_name':
+    elif key_name == 'export_class_name':
         return p_excel_vo.export_class_name
 
     elif p_key_vo is not None:
-        if p_key == 'property_name':
+        if key_name == 'property_name':
             return p_key_vo.key_client
-        elif p_key == 'type':
+        elif key_name == 'type':
             return transform_tye(p_key_vo.type, p_excel_vo.cfg.type_map)
-        elif p_key == 'comment':
+        elif key_name == 'comment':
+            sep = ''
+            if obj_par:
+                if 'separator' in obj_par:
+                    # 批注分隔符
+                    sep = obj_par['separator']
+            comment = p_key_vo.comment
+            if p_key_vo.pz:  # 批注功能
+                if sep:
+                    result = re.findall('^.*$', p_key_vo.pz, re.M)
+                    for pzv in result:
+                        comment += '\n' + sep + pzv
+                else:
+                    comment += '\n' + p_key_vo.pz
+            return comment
+        elif key_name == 'index':
             # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
-            return p_key_vo.comment
-        elif p_key == 'index':
             return str(p_key_vo.index)
 
-    elif p_key == 'enum_class_name':
+    elif key_name == 'enum_class_name':
         return p_enum_class_name
 
     else:
-        return 'undefinded'
+        return 'undefined'
+
+
+def parse_param(p_param: str):
+    obj = {}
+    params = p_param.split(',')
+    for v in params:
+        kvs = v.split(':')
+        key = kvs[0]
+        value = kvs[1]
+        obj[key] = value
+    return obj
 
 
 # 根据配置转换类型
@@ -161,7 +193,7 @@ def transform_tye(p_type, p_map):
     if p_type in p_map:
         return p_map[p_type]
     else:
-        if p_type == '' and p_map['default']:
+        if (p_type == '' or p_type is None) and p_map['default']:
             # 配置中typeMap字段有添default的则使用默认的类型
             return p_map['default']
         return None
@@ -182,20 +214,24 @@ def is_int(p_type, p_map):
         return False
 
 
-def parse_value(kv: KeyVo, cell: xlrd.sheet.Cell, p_map):
+# def parse_value(kv: KeyVo, cell: xlrd.sheet.Cell, p_map):
+def parse_value(kv: KeyVo, cell: Cell, p_map):
     if is_int(kv.type, p_map):  # 整型
-        if cell.value == '':  # 空值则强转为0
+        if cell.value == '' or cell.value is None:  # 空值则强转为0
             value = 0
         else:
             value = int(cell.value)
     else:
-        if cell.ctype == 2:
-            if cell.value % 1 == 0.0:
-                value = str(int(cell.value))
+        if cell.value is None:
+            value = ''
+        else:
+            if cell.data_type == opencell.TYPE_NUMERIC:
+                if cell.value % 1 == 0.0:
+                    value = str(int(cell.value))
+                else:
+                    value = str(cell.value)
             else:
                 value = str(cell.value)
-        else:
-            value = str(cell.value)
     return value
 
 
@@ -204,16 +240,17 @@ def export_json_data(excel_vo: ExcelVo, json_map):
     sheet = excel_vo.sheet
     key_vo_list = excel_vo.key_vo_list
     obj_list = {}
-    for i in range(ExcelIndexEnum.data_start_r.value, sheet.nrows):
-        rows = sheet.row(i)
+    for i in range(ExcelIndexEnum.data_start_r.value, sheet.max_row):
+        # rows = sheet.row(i)
+        rows = sheet[i + 1]  # openpyxl的row和col起始是1
         obj = {}
         ok_flag = True
         for v in key_vo_list:
             if not v.key_client:  # 跳过没有key名的
                 continue
-            cell = rows[v.index]
+            cell: Cell = rows[v.index]
             # 跳过id为空的行
-            if v.index == ExcelIndexEnum.data_start_c.value and cell.ctype == 0:
+            if v.index == ExcelIndexEnum.data_start_c.value and cell.value is None:
                 ok_flag = False
                 break
 
@@ -224,14 +261,23 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                 col_num_str = common_util.covert_10_to_26(col_num)
                 export_name = excel_vo.export_name + '.json'
                 error(
-                    '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(excel_vo.source_filename, i + 1,
+                    '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(excel_vo.source_filename,
+                                                                                   i + 1,
                                                                                    col_num,
                                                                                    col_num_str,
-                                                                                   export_name, excel_vo.sheet.name))
+                                                                                   export_name,
+                                                                                   excel_vo.sheet.title))
                 value = cell.value
             obj[v.key_client] = value
         if ok_flag:
             # obj_list.append(obj)
+            if obj['id'] in obj_list:
+                export_name = excel_vo.export_name + '.json'
+                warning('{0} | sheet:{1} | {2} | 重复的id，原来的值会被覆盖，请检查 {3}行'.format(excel_vo.source_filename,
+                                                                                 excel_vo.sheet.title,
+                                                                                 export_name,
+                                                                                 i + 1,
+                                                                                 ))
             obj_list[obj['id']] = obj
         # print(obj)
     json_map[excel_vo.export_name] = obj_list
@@ -296,7 +342,7 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
                     name, ext = os.path.splitext(file_url)
                     if ext == '.' + cfg.suffix:  # 删除指定格式的旧文件
                         os.remove(file_url)
-        if ((op & OP_PACK) == OP_PACK):
+        if (op & OP_PACK) == OP_PACK:
             if cfg.json_copy_path:
                 for root, dirs, files in os.walk(cfg.json_copy_path):
                     for fname in files:
@@ -322,23 +368,22 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
         file_url = v.absolute()
         if v.name.find('~$') > -1:  # 跳过临时打开xlsx文件
             continue
-        wb = xlrd.open_workbook(filename=file_url)
-        sheet_counts = len(wb.sheets())
-        for i in range(sheet_counts):  # 遍历多个sheet
-            sheet = wb.sheet_by_index(i)
-            if sheet.nrows <= 0:  # 避免sheet为空导致报错
-                break
-            if sheet.cell_type(0, 0) != 1:
-                # error('...[warning]第一行第一格没有填写表名，无效的xlsx：{0} sheet{1}'.format(v.name, str(i)))
+        # 使用data_only选项，我们从单元格而不是公式中获取值
+        wb = openpyxl.load_workbook(filename=file_url, data_only=True)
+        sheet_names = wb.sheetnames
+        for i in sheet_names:
+            sheet: openpyxl.worksheet.worksheet.Worksheet = wb[i]
+            cell_first = sheet.cell(1, 1)  # 注意：openpyxl使用index从1开始，区别于xlrd
+            if cell_first.value is None:  # 跳过第一行第一列没有数据的表
                 break
             if p_verbose:
-                print('{0} | sheet:{1}'.format(v.absolute(), sheet.name))
+                print('{0} | sheet:{1}'.format(v.absolute(), sheet.title))
             excel_vo = ExcelVo(cfg=cfg, sheet=sheet, source_path=file_url, filename=v.name)
             if excel_vo.export_name in export_name_map:
-                warning('...[warning]导出表名重复，跳过 {0} | sheet:{1}'.format(v, sheet.name))
+                warning('...[warning]导出表名重复，跳过 {0} | sheet:{1}'.format(v, sheet.title))
                 break
             if not excel_vo.has_id_in_client():  # 跳过没有id字段的
-                warning('...[warning]缺少id字段，跳过 {0} | sheet:{1}'.format(v, sheet.name))
+                warning('...[warning]缺少id字段，跳过 {0} | sheet:{1}'.format(v, sheet.title))
                 break
             export_name_map[excel_vo.export_name] = excel_vo
             file_count += 1

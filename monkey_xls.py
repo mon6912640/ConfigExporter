@@ -2,7 +2,9 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-import xlrd
+import openpyxl.cell.cell as opencell
+import openpyxl.worksheet.worksheet
+from openpyxl.cell.cell import Cell
 
 
 class KeyTypeEnum(Enum):
@@ -38,6 +40,8 @@ class KeyVo:
     key_client = ''
     key_server = ''
     comment = ''
+    # 批注
+    pz = ''
     type = 0
     index = 0
     export_client = False
@@ -132,7 +136,8 @@ class ExcelVo:
     # 模板配置引用
     cfg: TempCfgVo = None
     # 表格数据引用
-    sheet: xlrd.sheet.Sheet = None
+    # sheet: xlrd.sheet.Sheet = None
+    sheet: openpyxl.worksheet.worksheet.Worksheet = None
 
     __key_vo_list: List[KeyVo] = None
     __has_id_in_client = None
@@ -151,7 +156,8 @@ class ExcelVo:
         :return:
         """
         if self.sheet is not None:
-            return self.sheet.cell(0, 0).value
+            return self.sheet.cell(1, 1).value  # openpyxl的row和col起始是1
+            # return self.sheet.cell(0, 0).value
 
     @property
     def export_filename(self):
@@ -178,7 +184,8 @@ class ExcelVo:
         :return:
         """
         if self.__key_vo_list is None:
-            col_count = self.sheet.ncols
+            cells_row = list(self.sheet.rows)
+            col_count = self.sheet.max_column
             self.__key_vo_list = []
             for i in range(1, col_count):
                 comment_index_r = ExcelIndexEnum.comment_r.value
@@ -186,34 +193,31 @@ class ExcelVo:
                 type_index_r = ExcelIndexEnum.type_r.value
                 server_key_index_r = ExcelIndexEnum.server_key_r.value
 
-                comment_rows = self.sheet.row(comment_index_r)
-                client_key_rows = self.sheet.row(client_key_index_r)
-                type_rows = self.sheet.row(type_index_r)
-                server_key_rows = self.sheet.row(server_key_index_r)
-                cell_client = client_key_rows[i]
-                cell_server = server_key_rows[i]
-                cell_type = type_rows[i]
-                cell_comment = comment_rows[i]
-                '''
-                表格数据 ctype： 
-                0 empty
-                1 string
-                2 number
-                3 date
-                4 boolean
-                5 error
-                '''
-                if cell_client.ctype != 1 and cell_server.ctype != 1:  # 跳过非字符串的格子
+                comment_rows = cells_row[comment_index_r]
+                client_key_rows = cells_row[client_key_index_r]
+                type_rows = cells_row[type_index_r]
+                server_key_rows = cells_row[server_key_index_r]
+                cell_client: Cell = client_key_rows[i]
+                cell_server: Cell = server_key_rows[i]
+                cell_type: Cell = type_rows[i]
+                cell_comment: Cell = comment_rows[i]
+
+                if cell_client.data_type != opencell.TYPE_STRING and cell_server.data_type != opencell.TYPE_STRING:
+                    # 跳过非字符串的格子
                     continue
                 t_vo = KeyVo(p_index=i, p_type=cell_type.value)
                 self.__key_vo_list.append(t_vo)
-                if cell_client.ctype == 1:
+                if cell_client.data_type == opencell.TYPE_STRING:
                     t_vo.key_client = cell_client.value
                     t_vo.export_client = True
-                if cell_server.ctype == 1:
+                if cell_server.data_type == opencell.TYPE_STRING:
                     t_vo.key_server = cell_server.value
                     t_vo.export_server = True
                 t_vo.comment = cell_comment.value
+                if cell_comment.comment:  # 批注
+                    t_vo.pz = cell_comment.comment.content
+                # if t_vo.pz:
+                #     print('--', t_vo.pz)
         return self.__key_vo_list
 
     def has_id_in_client(self) -> bool:
