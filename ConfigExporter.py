@@ -99,7 +99,7 @@ def export_config_struct(excel_vo: ExcelVo, p_str_map):
         # 这里需要把前后的换行干掉
         return result.rstrip('\n')
 
-    output_str = re.sub('<<<<\\s*$(.+?)>>>>\\s*$', rpl_loop, excel_vo.cfg.str_tmp, flags=re.M | re.DOTALL)
+    output_str = re.sub('<<<<\\s*?$(.+?)>>>>\\s*?$', rpl_loop, excel_vo.cfg.str_tmp, flags=re.M | re.DOTALL)
 
     def rpl_export(m):
         key_str = m.group(1)
@@ -413,7 +413,7 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
                 # 这里需要把前后的换行干掉
                 return result.rstrip('\n')
 
-            output_str = re.sub('<<<<\\s*$(.+?)>>>>\\s*$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
+            output_str = re.sub('<<<<\\s*?$(.+?)>>>>\\s*?$', rpl_loop, str_tmp, flags=re.M | re.DOTALL)
 
             def rpl_export(m):
                 key_str = m.group(1)
