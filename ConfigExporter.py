@@ -157,14 +157,17 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, 
                 if 'separator' in obj_par:
                     # 批注分隔符
                     sep = obj_par['separator']
-            comment = p_key_vo.comment
+            comment = ' ' + p_key_vo.comment  # 前后空格兼容后端格式
             if p_key_vo.pz:  # 批注功能
+                comment += '  '  # 兼容后端格式
                 if sep:
                     result = re.findall('^.*$', p_key_vo.pz, re.M)
                     for pzv in result:
                         comment += '\n' + sep + pzv
                 else:
                     comment += '\n' + p_key_vo.pz
+            else:
+                comment += ' '  # 前后空格兼容后端格式
             return comment
         elif key_name == 'index':
             # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
