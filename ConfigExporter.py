@@ -271,6 +271,12 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                                                                                    export_name,
                                                                                    excel_vo.sheet.title))
                 value = cell.value
+            if isinstance(value, str):
+                # 把转义的换行字符串再转义
+                if '\\n' in value:
+                    value = value.replace('\\n', '\n')
+                if '\\t' in value:
+                    value = value.replace('\\t', '\t')
             obj[v.key_client] = value
         if ok_flag:
             # obj_list.append(obj)
