@@ -157,7 +157,7 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, 
                 if 'separator' in obj_par:
                     # 批注分隔符
                     sep = obj_par['separator']
-            comment = ' ' + p_key_vo.comment  # 前后空格兼容后端格式
+            comment = ' ' + str(p_key_vo.comment)  # 前后空格兼容后端格式
             if p_key_vo.pz:  # 批注功能
                 comment += '  '  # 兼容后端格式
                 if sep:
@@ -264,12 +264,13 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                 col_num_str = common_util.covert_10_to_26(col_num)
                 export_name = excel_vo.export_name + '.json'
                 error(
-                    '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(excel_vo.source_filename,
-                                                                                   i + 1,
-                                                                                   col_num,
-                                                                                   col_num_str,
-                                                                                   export_name,
-                                                                                   excel_vo.sheet.title))
+                    '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(
+                        excel_vo.source_filename,
+                        i + 1,
+                        col_num,
+                        col_num_str,
+                        export_name,
+                        excel_vo.sheet.title))
                 value = cell.value
             if isinstance(value, str):
                 # 把转义的换行字符串再转义
@@ -282,11 +283,12 @@ def export_json_data(excel_vo: ExcelVo, json_map):
             # obj_list.append(obj)
             if obj['id'] in obj_list:
                 export_name = excel_vo.export_name + '.json'
-                warning('{0} | sheet:{1} | {2} | 重复的id，原来的值会被覆盖，请检查 {3}行'.format(excel_vo.source_filename,
-                                                                                 excel_vo.sheet.title,
-                                                                                 export_name,
-                                                                                 i + 1,
-                                                                                 ))
+                warning(
+                    '{0} | sheet:{1} | {2} | 重复的id，原来的值会被覆盖，请检查 {3}行'.format(excel_vo.source_filename,
+                                                                                            excel_vo.sheet.title,
+                                                                                            export_name,
+                                                                                            i + 1,
+                                                                                            ))
             obj_list[obj['id']] = obj
         # print(obj)
     json_map[excel_vo.export_name] = obj_list
@@ -531,8 +533,18 @@ if __name__ == '__main__':
     parser.add_argument('--source', type=str, default='', help='配置路径')
     parser.add_argument('--output', type=str, default='', help='类结构体路径')
     parser.add_argument('--json', type=str, default='', help='配置导出json路径')
+    parser.add_argument('--debug', type=int, default=1, help='是否调试模式，1调试，0不调试，默认为1')
 
     args = parser.parse_args()
+
+    if args.debug:
+        args.template = 'ximi_sg'
+        args.exportJson = 0
+        args.exportStruct = 1
+        args.verbose = 1
+        args.source = 'E:/work_ximi_sg/plan/配置表_qdreamplay/cn'
+        args.output = 'E:/work_ximi_sg/qdreamplay/sanguoclient/src/configcls'
+        args.json = 'E:/work_ximi_sg/qdreamplay/sanguoclient/resource/config'
 
     print('运行参数：\n--加载模板：{0} \n--是否导出json：{1} \n--是否导出结构体：{2}'.format(
         args.template,

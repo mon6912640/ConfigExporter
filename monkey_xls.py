@@ -78,6 +78,8 @@ class TempCfgVo:
     enum_tmp = ''
     # 导出枚举类名称
     enum_class_name = ''
+    # 导出类文件命名格式 {0}表示表名
+    export_vo_name = ''
 
     # 工具的路径
     app_dir: Path = None
@@ -116,6 +118,8 @@ class TempCfgVo:
             self.enum_tmp = p_cfg_data['enumTmp']
         if 'enumClassName' in p_cfg_data:
             self.enum_class_name = p_cfg_data['enumClassName']
+        if 'exportVoName' in p_cfg_data:
+            self.export_vo_name = p_cfg_data['exportVoName']
 
     @property
     def str_tmp(self):
@@ -166,7 +170,7 @@ class ExcelVo:
         :return:
         """
         if self.sheet is not None:
-            return self.export_name + 'Cfg' + '.' + self.cfg.suffix
+            return self.cfg.export_vo_name.format(self.export_name) + '.' + self.cfg.suffix
 
     @property
     def export_class_name(self):
@@ -175,7 +179,7 @@ class ExcelVo:
         :return:
         """
         if self.sheet is not None:
-            return self.export_name + 'Cfg'
+            return self.cfg.export_vo_name.format(self.export_name)
 
     @property
     def key_vo_list(self):
@@ -216,6 +220,9 @@ class ExcelVo:
                 t_vo.comment = cell_comment.value
                 if cell_comment.comment:  # 批注
                     t_vo.pz = cell_comment.comment.content
+                    # 把批注的“*/”去掉
+                    if '*/' in t_vo.pz:
+                        t_vo.pz = t_vo.pz.replace('*/', '')
                 # if t_vo.pz:
                 #     print('--', t_vo.pz)
         return self.__key_vo_list

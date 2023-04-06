@@ -6,8 +6,8 @@ module fight {
      */
     export interface I<#export_name#> {
 <<<<
-        /** <#comment|separator:            #> */
-        <#property_name#>: <#type#>;
+    	/**<#comment|separator:    		#>*/
+    	<#property_name#> :<#type#>;
 >>>>
     }
 }

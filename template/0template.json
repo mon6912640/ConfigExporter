@@ -2,7 +2,6 @@
   /**
    * 这里可以配置模板相关的配置，该json文件支持注释（需要Python3的第三方json_minify库）
    */
-
   //====== 基础配置 ======
   "base": {
     //源路径 xlsx文件所在源路径
@@ -16,7 +15,7 @@
     //压缩文件后缀名
     "compressSuffix": "zip",
     //填上路径则会额外输出json表的可读副本，方便检查输出数据的错误，留空则不输出副本
-    "jsonCopyPath": "./copy",
+    "jsonCopyPath": "./temp_copy",
     //每次生成输出前是否清除旧文件
     "clean": true,
     //类结构是否生成在同一个文件
@@ -24,13 +23,104 @@
     //枚举类模板
     "enumTmp": "",
     //导出枚举类名称
-    "enumClassName": ""
+    "enumClassName": "",
+    //导出类文件命名格式{0}表示表名
+    "exportVoName": "{0}Cfg"
   },
+
   //====================
-
-
-
   //以下模板配置可以覆盖基础配置的字段，省略则使用基础配置的值
+  "ximi_sg": {
+    //源路径 xlsx文件所在源路径
+    "sourcePath": "E:\\work_ximi_sg\\plan\\配置表_qdreamplay\\cn",
+    //输出路径 vo对象类文件输出路径
+    "outputPath": "D:\\work_ximi\\client\\trunk\\clientGame\\src\\configcls",
+    //数据json输出路径
+    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
+    //每次生成输出前是否清除旧文件
+    "clean": false,
+    //导出类文件的后缀名
+    "suffix": "ts",
+    "template": "ts_sg.tmp",
+    //数据压缩方式
+    "jsonCompress": "",
+    //类结构是否生成在同一个文件
+    "structInOne": false,
+    //枚举类模板
+    "enumTmp": "ts.enum",
+    //导出枚举类名称
+    "enumClassName": "CfgAll",
+    //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
+    "typeMap": {
+      "default": "number",
+      "Integer": "number",
+      "INTEGER": "number",
+      "String": "string",
+      "STRING": "string",
+      "drop": "string",
+      "DROP": "string",
+      "items": "string",
+      "ITEMS": "string"
+    }
+  },
+  "ximigame1": {
+    //源路径 xlsx文件所在源路径
+    "sourcePath": "D://work_ximi//plan//配置表_trunk",
+    //输出路径 vo对象类文件输出路径
+    "outputPath": "D:\\work_ximi\\client\\trunk\\clientGame\\src\\configcls",
+    //数据json输出路径
+    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
+    //导出类文件的后缀名
+    "suffix": "ts",
+    "template": "ts_interface.tmp",
+    //数据压缩方式
+    "jsonCompress": "",
+    //类结构是否生成在同一个文件
+    "structInOne": true,
+    //枚举类模板
+    "enumTmp": "ts.enum",
+    //导出枚举类名称
+    "enumClassName": "CfgAll",
+    //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
+    "typeMap": {
+      "default": "number",
+      "Integer": "number",
+      "INTEGER": "number",
+      "String": "string",
+      "STRING": "string",
+      "drop": "string",
+      "DROP": "string",
+      "items": "string",
+      "ITEMS": "string"
+    }
+  },
+  "ximigame1_fight": {
+    "sourcePath": "D://work_ximi//plan//配置表_trunk",
+    "outputPath": "D:\\work_ximi\\client\\trunk\\clientLibs\\fight\\src\\configcls",
+    //数据json输出路径
+    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
+    "suffix": "ts",
+    "template": "ts_interface_fight.tmp",
+    //数据压缩方式
+    "jsonCompress": "",
+    //类结构是否生成在同一个文件
+    "structInOne": true,
+    //枚举类模板
+    "enumTmp": "ts_fight.enum",
+    //导出枚举类名称
+    "enumClassName": "CfgAll",
+    "typeMap": {
+      "default": "number",
+      "Integer": "number",
+      "INTEGER": "number",
+      "String": "string",
+      "STRING": "string",
+      "drop": "string",
+      "DROP": "string",
+      "items": "string",
+      "ITEMS": "string"
+    }
+  },
   "ts": {
     //源路径 xlsx文件所在源路径
     //"sourcePath": "./source",
@@ -57,100 +147,14 @@
       "String": "string"
     }
   },
-  //具体的项目模板
-  "FunnyBall": {
-    //源路径 xlsx文件所在源路径
-    "sourcePath": "H:/myProject/config",
-    //输出路径 vo对象类文件输出路径
-    "outputPath": "H:/myProject/FunnyBall/src/config",
-    //数据json输出路径
-    "jsonPath": "H:/myProject/FunnyBall/resource/assets/config",
-    //填上路径则会额外输出json表的可读副本，方便检查输出数据的错误，留空则不输出副本
-    "jsonCopyPath": "",
-    //是否打包在同一个json文件中
-    "jsonPackInOne": true,
-    //压缩文件后缀名
-    "compressSuffix": "zip",
-    //每次生成输出前是否清除旧文件
-    "clean": true,
-    //类结构是否生成在同一个文件
-    "structInOne": true,
-    //导出类文件的后缀名
-    "suffix": "ts",
-    //模板文件名称
-    "template": "ts.tmp",
-    //枚举类模板
-    "enumTmp": "ts.enum",
-    //导出枚举类名称
-    "enumClassName": "EnumCfg",
-    //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
-    "typeMap": {
-      "Integer": "number",
-      "String": "string"
-    }
-  },
   "ts2": {
-    "sourcePath": "D:/work/plan/配置表",
+    "sourcePath": "D://work//plan//配置表",
     "outputPath": "./output",
     "suffix": "ts",
     "template": "ts2.tmp",
     "typeMap": {
       "Integer": "number",
       "String": "string"
-    }
-  },
-  "ximigame1": {
-    "sourcePath": "D:/work_ximi/plan/配置表_trunk",
-    "outputPath": "D:\\work_ximi\\client\\trunk\\clientGame\\src\\configcls",
-    //数据json输出路径
-    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
-    "suffix": "ts",
-    "template": "ts_interface.tmp",
-    //数据压缩方式
-    "jsonCompress": "",
-    //类结构是否生成在同一个文件
-    "structInOne": true,
-    //枚举类模板
-    "enumTmp": "ts.enum",
-    //导出枚举类名称
-    "enumClassName": "CfgAll",
-    "typeMap": {
-      "default": "number",
-      "Integer": "number",
-      "INTEGER": "number",
-      "String": "string",
-      "STRING": "string",
-      "drop": "string",
-      "DROP": "string",
-      "items": "string",
-      "ITEMS": "string"
-    }
-  },
-  "ximigame1_fight": {
-    "sourcePath": "D:/work_ximi/plan/配置表_trunk",
-    "outputPath": "D:\\work_ximi\\client\\trunk\\clientLibs\\fight\\src\\configcls",
-    //数据json输出路径
-    "jsonPath": "D:\\work_ximi\\client\\trunk\\clientGame\\resource\\cfg",
-    "suffix": "ts",
-    "template": "ts_interface_fight.tmp",
-    //数据压缩方式
-    "jsonCompress": "",
-    //类结构是否生成在同一个文件
-    "structInOne": true,
-    //枚举类模板
-    "enumTmp": "ts_fight.enum",
-    //导出枚举类名称
-    "enumClassName": "CfgAll",
-    "typeMap": {
-      "default": "number",
-      "Integer": "number",
-      "INTEGER": "number",
-      "String": "string",
-      "STRING": "string",
-      "drop": "string",
-      "DROP": "string",
-      "items": "string",
-      "ITEMS": "string"
     }
   },
   "as": {
@@ -174,4 +178,3 @@
     }
   }
 }
-

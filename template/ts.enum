@@ -5,13 +5,13 @@
 class <#enum_class_name#> {
 
     static cfgObj: any;
-	static init(pCfgObj) {
-		let t = this;
-		t.cfgObj = pCfgObj;
-	}
+    static init(pCfgObj) {
+        let t = this;
+        t.cfgObj = pCfgObj;
+    }
 
 <<<<
-    static <#export_name#> = "<#export_name#>";
+	static <#export_name#> = "<#export_name#>";
     /** <#source_filename#> | sheet:<#sheet_name#> */
     static get <#export_name#>Map(): { [id: number]: I<#export_name#> } {
         return this.cfgObj["<#export_name#>"];
