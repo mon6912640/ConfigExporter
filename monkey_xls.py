@@ -64,6 +64,8 @@ class TempCfgVo:
     json_path = ''
     # 是否打包在同一个json文件中
     json_pack_in_one = False
+    # json打包文件名
+    json_pack_name = ''
     # 压缩方式
     json_compress = ''
     # 压缩文件后缀名
@@ -120,6 +122,8 @@ class TempCfgVo:
             self.enum_class_name = p_cfg_data['enumClassName']
         if 'exportVoName' in p_cfg_data:
             self.export_vo_name = p_cfg_data['exportVoName']
+        if 'jsonPackName' in p_cfg_data:
+            self.json_pack_name = p_cfg_data['jsonPackName']
 
     @property
     def str_tmp(self):
@@ -146,6 +150,7 @@ class ExcelVo:
     __key_vo_list: List[KeyVo] = None
     __has_id_in_client = None
     __has_id_in_server = None
+    __export_name = None
 
     def __init__(self, cfg, sheet, source_path, filename):
         self.cfg = cfg
@@ -159,9 +164,13 @@ class ExcelVo:
         导出的文件名（不包含后缀名）
         :return:
         """
-        if self.sheet is not None:
-            return self.sheet.cell(1, 1).value  # openpyxl的row和col起始是1
-            # return self.sheet.cell(0, 0).value
+        if self.__export_name is None:
+            # openpyxl的row和col起始是1
+            if self.sheet is not None:
+                self.__export_name = self.sheet.cell(1, 1).value
+            else:
+                self.__export_name = 'null'
+        return self.__export_name
 
     @property
     def export_filename(self):
@@ -189,18 +198,27 @@ class ExcelVo:
         """
         if self.__key_vo_list is None:
             cells_row = list(self.sheet.rows)
-            col_count = self.sheet.max_column
-            self.__key_vo_list = []
-            for i in range(1, col_count):
-                comment_index_r = ExcelIndexEnum.comment_r.value
-                client_key_index_r = ExcelIndexEnum.client_key_r.value
-                type_index_r = ExcelIndexEnum.type_r.value
-                server_key_index_r = ExcelIndexEnum.server_key_r.value
+            # col_count = self.sheet.max_column
+            columns = self.sheet.columns
 
-                comment_rows = cells_row[comment_index_r]
-                client_key_rows = cells_row[client_key_index_r]
-                type_rows = cells_row[type_index_r]
-                server_key_rows = cells_row[server_key_index_r]
+            comment_index_r = ExcelIndexEnum.comment_r.value
+            client_key_index_r = ExcelIndexEnum.client_key_r.value
+            type_index_r = ExcelIndexEnum.type_r.value
+            server_key_index_r = ExcelIndexEnum.server_key_r.value
+
+            comment_rows = cells_row[comment_index_r]
+            client_key_rows = cells_row[client_key_index_r]
+            type_rows = cells_row[type_index_r]
+            server_key_rows = cells_row[server_key_index_r]
+
+            self.__key_vo_list = []
+            # for i in range(1, col_count):
+            for cols in columns:
+                col_index = cols[0].column - 1
+                i = col_index
+                if i < 1:
+                    continue
+                # print('i = ', i)
                 cell_client: Cell = client_key_rows[i]
                 cell_server: Cell = server_key_rows[i]
                 cell_type: Cell = type_rows[i]

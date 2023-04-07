@@ -6,7 +6,7 @@
 type <#export_class_name#> = {
 <<<<
 	/**
-	 <#comment|separator:	 *#>
+	 *<#comment|separator:	 * #>
 	 */
 	<#property_name#>: <#type#>;
 >>>>

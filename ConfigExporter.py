@@ -3,6 +3,7 @@ import json
 import os
 import os.path
 import re
+import shutil
 import sys
 import time
 import zipfile
@@ -125,6 +126,7 @@ def export_config_struct(excel_vo: ExcelVo, p_str_map):
 def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, p_export_name: str = None,
                 p_enum_class_name: str = None):
     key_name = p_key
+    obj_par = None
     if '|' in p_key:  # 这里关键词支持参数模式
         key_list = p_key.split('|')
         key_name = key_list[0]
@@ -243,9 +245,19 @@ def export_json_data(excel_vo: ExcelVo, json_map):
     sheet = excel_vo.sheet
     key_vo_list = excel_vo.key_vo_list
     obj_list = {}
-    for i in range(ExcelIndexEnum.data_start_r.value, sheet.max_row):
-        # rows = sheet.row(i)
-        rows = sheet[i + 1]  # openpyxl的row和col起始是1
+    '''
+    如果你觉得使用 `openpyxl` 读取 Excel 文件速度较慢，可以尝试以下方法来提高读取速度：
+    - 使用只读模式打开工作簿。这可以通过在 `load_workbook` 函数中指定 `read_only=True` 来实现²。
+    - 避免使用 `max_row` 和 `max_column` 属性，因为 Excel 表格实际上可能比它们看起来更大，这样你就会遍历许多空单元格²。
+    - 避免多次调用 `sheet.cell(row=x, column=y).value` 函数，因为这个函数非常慢²。
+    '''
+    # for i in range(ExcelIndexEnum.data_start_r.value, sheet.max_row):
+    for rows in sheet.rows:
+        row_num = rows[0].row  # 行号
+        # openpyxl的row和col起始是1
+        if row_num - 1 < ExcelIndexEnum.data_start_r.value:
+            continue
+        # rows = sheet[i + 1]
         obj = {}
         ok_flag = True
         for v in key_vo_list:
@@ -266,7 +278,7 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                 error(
                     '{0} | sheet:{5} | {4} | 表格数值类型解析错误，请检查 {1}行 {2}({3})列'.format(
                         excel_vo.source_filename,
-                        i + 1,
+                        row_num,
                         col_num,
                         col_num_str,
                         export_name,
@@ -287,7 +299,7 @@ def export_json_data(excel_vo: ExcelVo, json_map):
                     '{0} | sheet:{1} | {2} | 重复的id，原来的值会被覆盖，请检查 {3}行'.format(excel_vo.source_filename,
                                                                                             excel_vo.sheet.title,
                                                                                             export_name,
-                                                                                            i + 1,
+                                                                                            row_num,
                                                                                             ))
             obj_list[obj['id']] = obj
         # print(obj)
@@ -306,7 +318,7 @@ def export_json_data(excel_vo: ExcelVo, json_map):
 
         if excel_vo.cfg.json_compress == 'zlib' or excel_vo.cfg.json_compress == 'zip':
             zlib_path = os.path.join(excel_vo.cfg.json_path, excel_vo.export_name + '.' + excel_vo.cfg.compress_suffix)
-            file_compress(path, zlib_path, delete_source=True, ptype=excel_vo.cfg.json_compress)
+            file_compress(path, zlib_path, delete_source=True, p_type=excel_vo.cfg.json_compress)
 
     if excel_vo.cfg.json_copy_path:
         # 格式化过的json（便于人员察看检查）
@@ -415,10 +427,10 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
             def rpl_loop(m):
                 result = ''
                 loop_str = str(m.group(1)).lstrip('\n')
-                for k, v in export_name_map.items():
+                for k, vv in export_name_map.items():
                     def rpl_property(m1):
                         key_str = m1.group(1)
-                        return replace_key(key_str, p_excel_vo=v, p_export_name=k)
+                        return replace_key(key_str, p_excel_vo=vv, p_export_name=k)
 
                     result += re.sub('<#(.*?)#>', rpl_property, loop_str)
                 # 这里需要把前后的换行干掉
@@ -439,25 +451,41 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
     # 所有配置打包到一个文件中
     if (op & OP_PACK) == OP_PACK and cfg.json_pack_in_one:
         json_pack = json.dumps(json_map, ensure_ascii=False, separators=(',', ':'))
-        path = os.path.join(cfg.json_path, '0config' + '.json')
+        path = os.path.join(cfg.json_path, cfg.json_pack_name + '.json')
         root = os.path.dirname(path)
         if not os.path.exists(root):
             os.makedirs(root)  # 递归创建文件夹
         with open(path, 'w', encoding='utf-8') as f:
             f.write(json_pack)
 
-        if cfg.json_compress == 'zlib' or cfg.json_compress == 'zip':  # zlib压缩 or zip打包
-            zlib_path = os.path.join(cfg.json_path, '0config' + '.' + cfg.compress_suffix)
-            file_compress(path, zlib_path, delete_source=True, ptype=cfg.json_compress)
+        # if cfg.json_compress == 'zlib' or cfg.json_compress == 'zip':  # zlib压缩 or zip打包
+        #     zlib_path = os.path.join(cfg.json_path, '0config' + '.' + cfg.compress_suffix)
+        #     file_compress(path, zlib_path, delete_source=True, p_type=cfg.json_compress)
 
         if cfg.json_copy_path:
             json_pack = json.dumps(json_map, ensure_ascii=False, indent=4)
-            path = os.path.join(cfg.json_copy_path, '0config' + '.json')
+            path = os.path.join(cfg.json_copy_path, cfg.json_pack_name + '.json')
             root = os.path.dirname(path)
             if not os.path.exists(root):
                 os.makedirs(root)  # 递归创建文件夹
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(json_pack)
+
+    # 打包相关文件
+    if (op & OP_PACK) == OP_PACK and (cfg.json_compress == 'zlib' or cfg.json_compress == 'zip'):
+        if cfg.json_pack_in_one:  # 压缩单个文件
+            one_json_path = os.path.join(cfg.json_path, cfg.json_pack_name + '.json')
+            zlib_path = os.path.join(cfg.json_path, cfg.json_pack_name + '.' + cfg.compress_suffix)
+            # file_compress(one_json_path, zlib_path, delete_source=True, ptype=cfg.json_compress)
+            zip_files([one_json_path], zlib_path, delete_source=True)
+        else:  # 压缩文件夹
+            zlib_path = os.path.join(cfg.json_path, cfg.json_pack_name + '.' + cfg.compress_suffix)
+            path_json_output = Path(cfg.json_path)
+            path_temp = path_json_output.joinpath(path_json_output.name)
+            path_temp.mkdir(parents=True, exist_ok=True)
+            copy_files_to_dir(['.json'], path_json_output, path_temp)
+            zip_dir(path_temp, zlib_path, delete_source=True)
+
     if (op & OP_STRUCT) == OP_STRUCT and cfg.struct_in_one:
         if len(str_map) > 0:
             struct_str = ''
@@ -468,16 +496,73 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
             path_struct.write_text(struct_str, encoding='utf-8')
 
 
-def file_compress(spath, tpath, level=9, delete_source=False, ptype='zlib'):
+def zip_files(files, zip_name, delete_source=False):
+    """
+    压缩多个文件
+    :param files:文件列表
+    :param zip_name:压缩文件名
+    :param delete_source:是否删除源文件，默认不删除
+    :return:
+    """
+    zip_file = zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED)
+    for file in files:
+        zip_file.write(file, os.path.basename(file))
+    zip_file.close()
+    if delete_source:
+        for file in files:
+            os.remove(file)
+
+
+def zip_dir(source_dir, zip_name, delete_source=False):
+    """
+    压缩文件夹
+    :param source_dir:文件夹路径
+    :param zip_name:压缩文件名
+    :param delete_source:是否删除源文件，默认不删除
+    :return:
+    """
+    zip_file = zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED)
+    pre_len = len(os.path.dirname(source_dir))
+    for root, dirs, files in os.walk(source_dir):
+        for file in files:
+            pathfile = os.path.join(root, file)
+            arcname = pathfile[pre_len:].strip(os.path.sep)  # 相对路径
+            zip_file.write(pathfile, arcname)
+    zip_file.close()
+    if delete_source:
+        shutil.rmtree(source_dir)
+
+
+def copy_files_to_dir(file_suffixs, source_dir, target_dir):
+    """
+    移动文件到指定文件夹
+    :param file_suffixs:文件后缀名列表
+    :param source_dir:源文件夹
+    :param target_dir:目标文件夹
+    :return:
+    """
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    for root, dirs, files in os.walk(source_dir):
+        if Path(root).samefile(Path(target_dir)):
+            continue
+        for file in files:
+            if os.path.splitext(file)[1] in file_suffixs:
+                # shutil.move(os.path.join(root, file), target_dir)
+                shutil.copy2(os.path.join(root, file), target_dir)
+
+
+def file_compress(spath, tpath, level=9, delete_source=False, p_type='zlib'):
     """
     zlib.compressobj 用来压缩数据流，用于文件传输
     :param spath:源文件
     :param tpath:目标文件
     :param level:压缩等级，越高压缩率越大，对应解压时间也变大
     :param delete_source:是否删除源文件，默认不删除
+    :param p_type:压缩类型
     :return:
     """
-    if ptype == 'zlib':
+    if p_type == 'zlib':
         file_source = open(spath, 'rb')
         file_target = open(tpath, 'wb')
         compress_obj = zlib.compressobj(level, wbits=-15, method=zlib.DEFLATED)  # 压缩对象
@@ -488,7 +573,7 @@ def file_compress(spath, tpath, level=9, delete_source=False, ptype='zlib'):
         file_target.write(compress_obj.flush())  # compressobj.flush()包含剩余压缩输出的字节对象，将剩余的字节内容写入到目标文件中
         file_source.close()
         file_target.close()
-    elif ptype == 'zip':
+    elif p_type == 'zip':
         try:
             with zipfile.ZipFile(tpath, mode="w", compression=zipfile.ZIP_DEFLATED) as f:
                 path_source = Path(spath)

@@ -10,6 +10,8 @@
     "jsonPath": "./data",
     //是否打包在同一个json文件中
     "jsonPackInOne": true,
+    //打包的json文件名
+    "jsonPackName": "0config",
     //数据压缩方式 目前支持zlib、zip 默认是zip
     "jsonCompress": "zip",
     //压缩文件后缀名
@@ -25,7 +27,7 @@
     //导出枚举类名称
     "enumClassName": "",
     //导出类文件命名格式{0}表示表名
-    "exportVoName": "{0}Cfg"
+    "exportVoName": "I{0}"
   },
 
   //====================
@@ -43,9 +45,11 @@
     "suffix": "ts",
     "template": "ts_sg.tmp",
     //数据压缩方式
-    "jsonCompress": "",
+    "jsonCompress": "zip",
+    //压缩文件后缀名
+    "compressSuffix": "bin",
     //类结构是否生成在同一个文件
-    "structInOne": false,
+    "structInOne": true,
     //枚举类模板
     "enumTmp": "ts.enum",
     //导出枚举类名称
@@ -54,8 +58,10 @@
     "typeMap": {
       "default": "number",
       "Integer": "number",
+      "integer": "number",
       "INTEGER": "number",
       "String": "string",
+      "string": "string",
       "STRING": "string",
       "drop": "string",
       "DROP": "string",
