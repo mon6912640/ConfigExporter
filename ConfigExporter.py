@@ -152,7 +152,7 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, 
         if key_name == 'property_name':
             return p_key_vo.key_client
         elif key_name == 'type':
-            return transform_tye(p_key_vo.type, p_excel_vo.cfg.type_map)
+            return transform_type(p_key_vo.type, p_excel_vo.cfg.type_map)
         elif key_name == 'comment':
             sep = ''
             if obj_par:
@@ -194,13 +194,18 @@ def parse_param(p_param: str):
 
 
 # 根据配置转换类型
-def transform_tye(p_type, p_map):
+def transform_type(p_type, p_map):
     if p_type in p_map:
         return p_map[p_type]
     else:
-        if (p_type == '' or p_type is None) and p_map['default']:
-            # 配置中typeMap字段有添default的则使用默认的类型
+        if (p_type == '' or p_type is None) and 'default' in p_map:
+            # 不填类型则使用typeMap字段中的default指定的类型
             return p_map['default']
+        elif 'unknown' in p_map:
+            # 配置中typeMap字段有添加unknown的则使用unknown的类型
+            warning('未知类型：{0}，已导出为{1}'.format(p_type, p_map['unknown']))
+            return p_map['unknown']
+        error('未知类型：{0}，且0template.json配置中的typeMap字段没有配置“default”或“unknown”'.format(p_type))
         return None
 
 
@@ -211,7 +216,7 @@ def is_int(p_type, p_map):
     :param p_map:
     :return:
     """
-    ttype = transform_tye(p_type, p_map)
+    ttype = transform_type(p_type, p_map)
     if ttype == 'number':
         # 整型的类型可以在这里添加
         return True
