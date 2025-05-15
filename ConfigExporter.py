@@ -174,6 +174,8 @@ def replace_key(p_key: str, p_excel_vo: ExcelVo = None, p_key_vo: KeyVo = None, 
         elif key_name == 'index':
             # 这里需要注意，python的数字类型不会自动转换为字符串，这里需要强转一下
             return str(p_key_vo.index)
+        else:
+            return ''
 
     elif key_name == 'enum_class_name':
         return p_enum_class_name
@@ -205,8 +207,9 @@ def transform_type(p_type, p_map):
             # 配置中typeMap字段有添加unknown的则使用unknown的类型
             warning('未知类型：{0}，已导出为{1}'.format(p_type, p_map['unknown']))
             return p_map['unknown']
-        error('未知类型：{0}，且0template.json配置中的typeMap字段没有配置“default”或“unknown”'.format(p_type))
-        return None
+        else:
+            error('未知类型：{0}，且0template.json配置中的typeMap字段没有配置“default”或“unknown”'.format(p_type))
+            return None
 
 
 def is_int(p_type, p_map):
@@ -347,7 +350,7 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
     path_source = Path(cfg.source_path)
     path_source = path_source.resolve()
     if not path_source.exists():
-        error('...[warning]路径不存在 {0}'.format(path_source))
+        error('...[warning]source路径不存在 {0}'.format(path_source))
         return
 
     if p_output:
@@ -355,8 +358,9 @@ def main_run(p_key, op, p_verbose=0, p_source='', p_output='', p_json=''):
     path_output = Path(cfg.output_path)
     path_output = path_output.resolve()
     if not path_output.exists():
-        error('...[warning]路径不存在 {0}'.format(path_output))
-        return
+        # error('...[warning]路径不存在 {0}'.format(path_output))
+        # 路径不存在，创建文件夹
+        path_output.mkdir(parents=True, exist_ok=True)
 
     if p_json:
         cfg.json_path = p_json
@@ -627,6 +631,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # 调试模式，直接使用这里的参数
     if args.debug:
         args.template = 'ximi_sg'
         args.exportJson = 0

@@ -129,8 +129,8 @@
   },
   "ts": {
     //源路径 xlsx文件所在源路径
-    //"sourcePath": "./source",
-    "sourcePath": "D://work//plan//配置表",
+    "sourcePath": "./source",
+//    "sourcePath": "D://work//plan//配置表",
     //输出路径 vo对象类文件输出路径
     "outputPath": "./output",
     //是否打包在同一个json文件中
@@ -149,6 +149,8 @@
     "template": "ts.tmp",
     //类型的映射表，把excel的类型映射成语言类文件对应的数据类型
     "typeMap": {
+//      "default": "number",
+//      "unknown": "string",
       "Integer": "number",
       "String": "string"
     }
